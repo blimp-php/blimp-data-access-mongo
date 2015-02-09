@@ -13,8 +13,8 @@
     ],
     "require": {
         "blimp/blimp-base": "@dev",
-        "doctrine/mongodb-odm": "1.0.*@dev",
-        "gedmo/doctrine-extensions": "2.3.*"
+        "blimp/blimp-data-access": "@dev",
+        "doctrine/mongodb-odm": "1.0.*@dev"
     },
     "autoload": {
         "psr-4": {
@@ -26,6 +26,10 @@
         {
             "type": "vcs",
             "url": "../blimp-base"
+        },
+        {
+            "type": "vcs",
+            "url": "../blimp-data-access"
         }
     ]
 }

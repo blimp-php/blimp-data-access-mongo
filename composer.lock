@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "c5ca2a193fbc9f4a092ee12fc480c3c4",
+    "hash": "eb10614e97cfa1d4e44e50442e02675d",
     "packages": [
         {
             "name": "behat/transliterator",
@@ -45,6 +45,73 @@
                 "transliterator"
             ],
             "time": "2014-09-04 13:06:40"
+        },
+        {
+            "name": "blimp/blimp-base",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "../blimp-base",
+                "reference": "49166b4f01a03ae7cb55122fdfd3c51135fcba4e"
+            },
+            "require": {
+                "pimple/pimple": "~3.0",
+                "psr/log": "~1.0"
+            },
+            "suggest": {
+                "monolog/monolog": "Allow logging of the application"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Blimp\\Base\\": "src"
+                }
+            },
+            "license": [
+                "LGPL-3.0+"
+            ],
+            "authors": [
+                {
+                    "name": "Nelson Antunes",
+                    "email": "nelson.antunes@gmail.com",
+                    "homepage": "http://nantunes.net",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Blimp framework",
+            "time": "2015-02-09 17:00:27"
+        },
+        {
+            "name": "blimp/blimp-data-access",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "../blimp-data-access",
+                "reference": "c572ce0ee0f02cd17c0afbd3b6df89249b33109e"
+            },
+            "require": {
+                "gedmo/doctrine-extensions": "2.3.*",
+                "pimple/pimple": "~3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Blimp\\DataAccess\\": "src"
+                }
+            },
+            "license": [
+                "LGPL-3.0+"
+            ],
+            "authors": [
+                {
+                    "name": "Nelson Antunes",
+                    "email": "nelson.antunes@gmail.com",
+                    "homepage": "http://nantunes.net",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Blimp framework",
+            "time": "2015-02-09 17:17:44"
         },
         {
             "name": "doctrine/annotations",
@@ -723,6 +790,95 @@
             "time": "2015-01-29 15:01:49"
         },
         {
+            "name": "pimple/pimple",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/silexphp/Pimple.git",
+                "reference": "2bcd90124a31bcf61804b9eb5badb85679469921"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/silexphp/Pimple/zipball/2bcd90124a31bcf61804b9eb5badb85679469921",
+                "reference": "2bcd90124a31bcf61804b9eb5badb85679469921",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Pimple": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                }
+            ],
+            "description": "Pimple is a simple Dependency Injection Container for PHP 5.3",
+            "homepage": "http://pimple.sensiolabs.org",
+            "keywords": [
+                "container",
+                "dependency injection"
+            ],
+            "time": "2015-01-26 16:18:50"
+        },
+        {
+            "name": "psr/log",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/log.git",
+                "reference": "1af1529b49a6e065ae6802e70192aba35d79b7d8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/1af1529b49a6e065ae6802e70192aba35d79b7d8",
+                "reference": "1af1529b49a6e065ae6802e70192aba35d79b7d8",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Psr\\Log\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "http://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for logging libraries",
+            "keywords": [
+                "log",
+                "psr",
+                "psr-3"
+            ],
+            "time": "2015-02-05 09:32:11"
+        },
+        {
             "name": "symfony/console",
             "version": "2.7.x-dev",
             "target-dir": "Symfony/Component/Console",
@@ -785,6 +941,7 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "blimp/blimp-base": 20,
+        "blimp/blimp-data-access": 20,
         "doctrine/mongodb-odm": 20
     },
     "prefer-stable": false,
