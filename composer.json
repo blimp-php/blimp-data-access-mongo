@@ -12,7 +12,7 @@
         }
     ],
     "require": {
-        "blimp/blimp-base": "@dev",
+        "blimp/blimp-http": "@dev",
         "blimp/blimp-data-access": "@dev",
         "doctrine/mongodb-odm": "1.0.*@dev"
     },
@@ -25,7 +25,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "../blimp-base"
+            "url": "../blimp-http"
         },
         {
             "type": "vcs",

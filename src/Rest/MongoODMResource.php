@@ -1,7 +1,7 @@
 <?php
 namespace Blimp\DataAccess\Rest;
 
-use Blimp\Base\BlimpException;
+use Blimp\Http\BlimpHttpException;
 use Pimple\Container;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class MongoODMResource {
     public function process(Container $api, Request $request, $id, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
-            throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
+            throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
         }
 
         $token = $api['security']->getToken();
@@ -41,11 +41,11 @@ class MongoODMResource {
 
                 if($parent_id != null) {
                     if ($_parentResourceClass == null) {
-                        throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
                     }
 
                     if ($_parentIdField == null) {
-                        throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
                     }
 
                     $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
@@ -58,7 +58,7 @@ class MongoODMResource {
                 $item = $query->getSingleResult();
 
                 if ($item == null) {
-                    throw new BlimpException(Response::HTTP_NOT_FOUND, "Not found");
+                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
                 }
 
                 if(!$can_doit) {
@@ -111,7 +111,7 @@ class MongoODMResource {
                 $item = $query->getSingleResult();
 
                 if ($item == null) {
-                    throw new BlimpException(Response::HTTP_NOT_FOUND, "Not found");
+                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
                 }
 
                 if(!$can_doit) {
@@ -168,7 +168,7 @@ class MongoODMResource {
                 $item = $query->getSingleResult();
 
                 if ($item == null) {
-                    throw new BlimpException(Response::HTTP_NOT_FOUND, "Not found");
+                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
                 }
 
                 if(!$can_doit) {
@@ -195,7 +195,7 @@ class MongoODMResource {
                 break;
 
             default:
-                throw new BlimpException(Response::HTTP_METHOD_NOT_ALLOWED, "Method not allowed");
+                throw new BlimpHttpException(Response::HTTP_METHOD_NOT_ALLOWED, "Method not allowed");
         }
     }
 }

@@ -1,7 +1,7 @@
 <?php
 namespace Blimp\DataAccess\Rest;
 
-use Blimp\Base\BlimpException;
+use Blimp\Http\BlimpHttpException;
 use Pimple\Container;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 class MongoODMCollection {
     public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_idField = null, $_idLowercase = true, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
-            throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
+            throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
         }
 
         $token = null;
@@ -61,11 +61,11 @@ class MongoODMCollection {
 
                 if($parent_id != null) {
                     if ($_parentResourceClass == null) {
-                        throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
                     }
 
                     if ($_parentIdField == null) {
-                        throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
                     }
 
                     $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
@@ -80,7 +80,7 @@ class MongoODMCollection {
                 $count = $cursor->count();
 
                 if ($count == 0) {
-                    throw new BlimpException(Response::HTTP_NO_CONTENT, "No content");
+                    throw new BlimpHttpException(Response::HTTP_NO_CONTENT, "No content");
                 }
 
                 $elements = array();
@@ -129,12 +129,12 @@ class MongoODMCollection {
                     }
 
                     if (empty($id)) {
-                        throw new BlimpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy set to NONE and no Id provided");
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy set to NONE and no Id provided");
                     } else {
                         $check = $dm->find($_resourceClass, $id);
 
                         if ($check != null) {
-                            throw new BlimpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy set to NONE and provided Id already exists");
+                            throw new BlimpHttpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy set to NONE and provided Id already exists");
                         }
                     }
                 }
@@ -163,7 +163,7 @@ class MongoODMCollection {
                 break;
 
             default:
-                throw new BlimpException(Response::HTTP_METHOD_NOT_ALLOWED, "Method not allowed");
+                throw new BlimpHttpException(Response::HTTP_METHOD_NOT_ALLOWED, "Method not allowed");
         }
     }
 }
