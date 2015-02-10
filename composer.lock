@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "683baef723f121bb05eadf41efb38d5e",
+    "hash": "df2c4bac2b0e122df7f534c8928d04c8",
     "packages": [
         {
             "name": "behat/transliterator",
@@ -51,7 +51,7 @@
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "../blimp-data-access",
+                "url": "git@bitbucket.org:nantunes/blimp-data-access.git",
                 "reference": "c572ce0ee0f02cd17c0afbd3b6df89249b33109e"
             },
             "require": {
@@ -83,7 +83,7 @@
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "../blimp-http",
+                "url": "git@bitbucket.org:nantunes/blimp-http.git",
                 "reference": "e7d68663637b65a9c81979340112b50e5563e8b4"
             },
             "require": {
