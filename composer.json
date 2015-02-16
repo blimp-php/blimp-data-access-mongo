@@ -12,13 +12,19 @@
         }
     ],
     "require": {
-        "blimp/blimp-http": "@dev",
-        "blimp/blimp-data-access": "@dev",
+        "php": ">=5.4.0",
+        "blimp/blimp-http": "1.0.*",
+        "blimp/blimp-data-access": "1.0.*",
         "doctrine/mongodb-odm": "1.0.*@dev"
     },
     "autoload": {
         "psr-4": {
             "Blimp\\DataAccess\\": "src"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
         }
     },
     "minimum-stability": "dev",

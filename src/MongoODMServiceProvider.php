@@ -132,7 +132,7 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
                             throw new \InvalidArgumentException('Mapping definitions require "dir" and "prefix" options.');
                         }
 
-                        if (!in_array($mappingConfig['type'], array('xml', 'yml', 'annotation', 'php', 'staticphp'))) {
+                        if (empty($mappingConfig['type']) || !in_array($mappingConfig['type'], array('xml', 'yml', 'annotation', 'php', 'staticphp'))) {
                             $mappingConfig['type'] = 'annotation';
                         }
 
@@ -184,7 +184,7 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
                 }
 
                 if (!isset($cacheDriver['namespace'])) {
-                    $env = _DIR_;
+                    $env = __DIR__;
                     $hash = hash('sha256', $env);
                     $namespace = 'blimp_' . $name . '_' . $hash;
                     $cacheDriver['namespace'] = $namespace;
