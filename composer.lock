@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "df2c4bac2b0e122df7f534c8928d04c8",
+    "hash": "448a36435f0a6b45064d48e4e96fc647",
     "packages": [
         {
             "name": "behat/transliterator",
@@ -52,13 +52,19 @@
             "source": {
                 "type": "git",
                 "url": "git@bitbucket.org:nantunes/blimp-data-access.git",
-                "reference": "c572ce0ee0f02cd17c0afbd3b6df89249b33109e"
+                "reference": "e6aea205205063afa95b7d9e72f0198ca62234b8"
             },
             "require": {
                 "gedmo/doctrine-extensions": "2.3.*",
+                "php": ">=5.4.0",
                 "pimple/pimple": "~3.0"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Blimp\\DataAccess\\": "src"
@@ -76,7 +82,7 @@
                 }
             ],
             "description": "Blimp framework",
-            "time": "2015-02-09 17:17:44"
+            "time": "2015-02-16 23:15:46"
         },
         {
             "name": "blimp/blimp-http",
@@ -84,15 +90,21 @@
             "source": {
                 "type": "git",
                 "url": "git@bitbucket.org:nantunes/blimp-http.git",
-                "reference": "e7d68663637b65a9c81979340112b50e5563e8b4"
+                "reference": "f872ddeca1dd4e9de7570a6f59e2c18fe4734668"
             },
             "require": {
+                "php": ">=5.4.0",
                 "pimple/pimple": "~3.0",
                 "psr/log": "~1.0",
                 "symfony/http-foundation": "2.5.*",
                 "symfony/http-kernel": "2.5.*"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Blimp\\Http\\": "src"
@@ -110,7 +122,7 @@
                 }
             ],
             "description": "Blimp framework",
-            "time": "2015-02-09 17:45:21"
+            "time": "2015-02-16 23:15:46"
         },
         {
             "name": "doctrine/annotations",
@@ -186,12 +198,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/cache.git",
-                "reference": "15334410a781da60f861df536b460f24c8f01eeb"
+                "reference": "6c5c32eb6c596993d04e13b95d0c1e8153783d7a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/cache/zipball/15334410a781da60f861df536b460f24c8f01eeb",
-                "reference": "15334410a781da60f861df536b460f24c8f01eeb",
+                "url": "https://api.github.com/repos/doctrine/cache/zipball/6c5c32eb6c596993d04e13b95d0c1e8153783d7a",
+                "reference": "6c5c32eb6c596993d04e13b95d0c1e8153783d7a",
                 "shasum": ""
             },
             "require": {
@@ -248,7 +260,7 @@
                 "cache",
                 "caching"
             ],
-            "time": "2015-02-01 04:40:53"
+            "time": "2015-02-16 12:24:01"
         },
         {
             "name": "doctrine/collections",
@@ -642,12 +654,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/mongodb-odm.git",
-                "reference": "1343375a4edf3e2157138e442441654e25fabbec"
+                "reference": "b799755b4bd72c0b66d5e08574b2dc4d0e26c62b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/mongodb-odm/zipball/1343375a4edf3e2157138e442441654e25fabbec",
-                "reference": "1343375a4edf3e2157138e442441654e25fabbec",
+                "url": "https://api.github.com/repos/doctrine/mongodb-odm/zipball/b799755b4bd72c0b66d5e08574b2dc4d0e26c62b",
+                "reference": "b799755b4bd72c0b66d5e08574b2dc4d0e26c62b",
                 "shasum": ""
             },
             "require": {
@@ -708,7 +720,7 @@
                 "odm",
                 "persistence"
             ],
-            "time": "2015-01-23 10:29:57"
+            "time": "2015-02-13 22:02:56"
         },
         {
             "name": "gedmo/doctrine-extensions",
@@ -716,12 +728,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/Atlantic18/DoctrineExtensions.git",
-                "reference": "acbf585de09e1ec44b3e362291b9db4eb6cfca6c"
+                "reference": "61a13a7d5febaae676519c595b6caeda1e23ff4c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Atlantic18/DoctrineExtensions/zipball/acbf585de09e1ec44b3e362291b9db4eb6cfca6c",
-                "reference": "acbf585de09e1ec44b3e362291b9db4eb6cfca6c",
+                "url": "https://api.github.com/repos/Atlantic18/DoctrineExtensions/zipball/61a13a7d5febaae676519c595b6caeda1e23ff4c",
+                "reference": "61a13a7d5febaae676519c595b6caeda1e23ff4c",
                 "shasum": ""
             },
             "require": {
@@ -786,7 +798,7 @@
                 "tree",
                 "uploadable"
             ],
-            "time": "2015-01-29 15:01:49"
+            "time": "2015-02-10 16:59:37"
         },
         {
             "name": "pimple/pimple",
@@ -884,12 +896,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Console.git",
-                "reference": "e30a2778069b48bd1e560e4a2815d15c9ab2f563"
+                "reference": "289113e60aad754d35b50347f66ecd3a4d96d03c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Console/zipball/e30a2778069b48bd1e560e4a2815d15c9ab2f563",
-                "reference": "e30a2778069b48bd1e560e4a2815d15c9ab2f563",
+                "url": "https://api.github.com/repos/symfony/Console/zipball/289113e60aad754d35b50347f66ecd3a4d96d03c",
+                "reference": "289113e60aad754d35b50347f66ecd3a4d96d03c",
                 "shasum": ""
             },
             "require": {
@@ -932,7 +944,7 @@
             ],
             "description": "Symfony Console Component",
             "homepage": "http://symfony.com",
-            "time": "2015-02-05 07:11:58"
+            "time": "2015-02-12 11:03:31"
         },
         {
             "name": "symfony/debug",
@@ -941,12 +953,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Debug.git",
-                "reference": "39a94beb5ea7f5f39854e7c8ab8dfda95e831f5d"
+                "reference": "49231a9696082b1f0b0f1215b20606dc90c6e346"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Debug/zipball/39a94beb5ea7f5f39854e7c8ab8dfda95e831f5d",
-                "reference": "39a94beb5ea7f5f39854e7c8ab8dfda95e831f5d",
+                "url": "https://api.github.com/repos/symfony/Debug/zipball/49231a9696082b1f0b0f1215b20606dc90c6e346",
+                "reference": "49231a9696082b1f0b0f1215b20606dc90c6e346",
                 "shasum": ""
             },
             "require": {
@@ -957,7 +969,7 @@
                 "symfony/http-kernel": ">=2.3,<2.3.24|~2.4.0|>=2.5,<2.5.9|>=2.6,<2.6.2"
             },
             "require-dev": {
-                "symfony/class-loader": "~2.2",
+                "symfony/class-loader": "~2.2|~3.0.0",
                 "symfony/http-foundation": "~2.1|~3.0.0",
                 "symfony/http-kernel": "~2.3.24|~2.5.9|~2.6,>=2.6.2|~3.0.0"
             },
@@ -992,7 +1004,7 @@
             ],
             "description": "Symfony Debug Component",
             "homepage": "http://symfony.com",
-            "time": "2015-01-25 04:39:35"
+            "time": "2015-02-12 12:00:00"
         },
         {
             "name": "symfony/event-dispatcher",
@@ -1001,12 +1013,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "e9298668dce8dd219d1ee2290c7f313954f1f984"
+                "reference": "2dc33aff298b20ad099ac456034aebc5055f02fb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/e9298668dce8dd219d1ee2290c7f313954f1f984",
-                "reference": "e9298668dce8dd219d1ee2290c7f313954f1f984",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/2dc33aff298b20ad099ac456034aebc5055f02fb",
+                "reference": "2dc33aff298b20ad099ac456034aebc5055f02fb",
                 "shasum": ""
             },
             "require": {
@@ -1050,7 +1062,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2015-02-05 06:58:17"
+            "time": "2015-02-11 07:17:51"
         },
         {
             "name": "symfony/http-foundation",
@@ -1184,12 +1196,11 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "blimp/blimp-http": 20,
-        "blimp/blimp-data-access": 20,
         "doctrine/mongodb-odm": 20
     },
     "prefer-stable": false,
-    "prefer-lowest": false,
-    "platform": [],
+    "platform": {
+        "php": ">=5.4.0"
+    },
     "platform-dev": []
 }
