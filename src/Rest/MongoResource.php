@@ -5,8 +5,9 @@ use Blimp\Http\BlimpHttpException;
 use Pimple\Container;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Doctrine\MongoDB\Query\Builder;
 
-class MongoODMResource {
+class MongoResource {
     public function process(Container $api, Request $request, $id, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
             throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
@@ -14,7 +15,9 @@ class MongoODMResource {
 
         $token = $api['security']->getToken();
 
-        $dm = $api['dataaccess.mongoodm.documentmanager']();
+        $collection = $api['dataaccess.mongoodm.connection']()->selectCollection($api['config']['mongoodm']['default_database'], $_resourceClass);
+
+        $m_id = new \MongoId($id);
 
         switch ($request->getMethod()) {
             case 'GET':
@@ -26,31 +29,22 @@ class MongoODMResource {
                 }
 
                 if(!$can_doit) {
-                    $user = $token !== null ? $token->getUser() : null;
+                    $user = $token !== null ? $token->getUsername() : null;
 
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
+                    if($user == null) {
                         $api['security.permission.denied']($_securityDomain.':get');
                     }
                 }
 
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(true);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
+                $query_builder = new Builder($collection);
+                $query_builder->field('_id')->equals($m_id);
 
                 if($parent_id != null) {
-                    if ($_parentResourceClass == null) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
-                    }
-
                     if ($_parentIdField == null) {
                         throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
                     }
 
-                    $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
-
-                    $query_builder->field($_parentIdField)->references($ref);
+                    $query_builder->field($_parentIdField)->equals($parent_id);
                 }
 
                 $query = $query_builder->getQuery();
@@ -64,18 +58,35 @@ class MongoODMResource {
                 if(!$can_doit) {
                     $owner = null;
 
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
+                    if(array_key_exists('owner', $item)) {
+                        $owner = $item['owner'];
                     }
 
-                    $user = $token->getUser();
+                    $user = $token->getUsername();
 
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
+                    if($owner == null || $user != $owner) {
                         $api['security.permission.denied']($_securityDomain.':get');
                     }
                 }
 
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
+                $item['id'] = $item['_id']->{'$id'};
+                unset($item['_id']);
+
+                if(array_key_exists('created', $item)) {
+                    $value = $item['created'];
+                    if($value instanceof \MongoDate) {
+                        $item['created'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                if(array_key_exists('updated', $item)) {
+                    $value = $item['updated'];
+                    if($value instanceof \MongoDate) {
+                        $item['updated'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                $result = $item;
 
                 return $result;
 
@@ -93,18 +104,15 @@ class MongoODMResource {
                 if(!$can_doit) {
                     $user = $token !== null ? $token->getUser() : null;
 
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
+                    if($user == null) {
                         $api['security.permission.denied']($_securityDomain.':edit');
                     }
                 }
 
                 $data = $request->attributes->get('data');
 
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(true);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
+                $query_builder = new Builder($collection);
+                $query_builder->field('_id')->equals($m_id);
 
                 $query = $query_builder->getQuery();
 
@@ -117,23 +125,48 @@ class MongoODMResource {
                 if(!$can_doit) {
                     $owner = null;
 
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
+                    if(array_key_exists('owner', $item)) {
+                        $owner = $item['owner'];
                     }
 
-                    $user = $token->getUser();
+                    $user = $token->getUsername();
 
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
+                    if($owner == null || $user != $owner) {
                         $api['security.permission.denied']($_securityDomain.':edit');
                     }
                 }
 
-                $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item, $request->getMethod() == 'PATCH');
+                unset($data['id']);
+                unset($data['_id']);
+                unset($data['owner']);
+                unset($data['created']);
+                unset($data['updated']);
 
-                $dm->persist($item);
-                $dm->flush($item);
+                $data['owner'] = $item['owner'];
+                $data['created'] = $item['created'];
 
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
+                $data['updated'] = new \MongoDate();
+
+                $collection->update(['_id' => $m_id], $data);
+
+                $data['id'] = $id;
+                unset($data['_id']);
+
+                if(array_key_exists('created', $data)) {
+                    $value = $data['created'];
+                    if($value instanceof \MongoDate) {
+                        $data['created'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                if(array_key_exists('updated', $data)) {
+                    $value = $data['updated'];
+                    if($value instanceof \MongoDate) {
+                        $data['updated'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                $result = $data;
 
                 return $result;
 
@@ -150,16 +183,13 @@ class MongoODMResource {
                 if(!$can_doit) {
                     $user = $token !== null ? $token->getUser() : null;
 
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
+                    if($user == null) {
                         $api['security.permission.denied']($_securityDomain.':delete');
                     }
                 }
 
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(false);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
+                $query_builder = new Builder($collection);
+                $query_builder->field('_id')->equals($m_id);
 
                 $query = $query_builder->getQuery();
 
@@ -172,21 +202,39 @@ class MongoODMResource {
                 if(!$can_doit) {
                     $owner = null;
 
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
+                    if(array_key_exists('owner', $item)) {
+                        $owner = $item['owner'];
                     }
 
-                    $user = $token->getUser();
+                    $user = $token->getUsername();
 
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
+                    if($owner == null || $user != $owner) {
                         $api['security.permission.denied']($_securityDomain.':delete');
                     }
                 }
 
-                $dm->remove($item);
-                $dm->flush($item);
+                $collection->remove(['_id' => $m_id]);
 
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
+                unset($item['id']);
+                unset($item['_id']);
+
+                if(array_key_exists('created', $item)) {
+                    $value = $item['created'];
+                    if($value instanceof \MongoDate) {
+                        $item['created'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                if(array_key_exists('updated', $item)) {
+                    $value = $item['updated'];
+                    if($value instanceof \MongoDate) {
+                        $item['updated'] = new \DateTime('@' . $value->sec);
+                    }
+                }
+
+                $item['deleted'] = new \DateTime();
+
+                $result = $item;
 
                 return $result;
 
