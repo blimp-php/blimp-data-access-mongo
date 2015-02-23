@@ -9,9 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Doctrine\MongoDB\Query\Builder;
 
 class MongoCollection {
-    public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_idField = null, $_idLowercase = true, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
+    public function process(Container $api, Request $request, $class, $_securityDomain = null, $_resourceClass = null, $_idField = null, $_idLowercase = true, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
-            throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
+            $_resourceClass = $class;
         }
 
         $token = null;

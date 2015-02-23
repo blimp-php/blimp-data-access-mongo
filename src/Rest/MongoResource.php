@@ -8,16 +8,20 @@ use Symfony\Component\HttpFoundation\Response;
 use Doctrine\MongoDB\Query\Builder;
 
 class MongoResource {
-    public function process(Container $api, Request $request, $id, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
+    public function process(Container $api, Request $request, $class, $id, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
-            throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
+            $_resourceClass = $class;
         }
 
         $token = $api['security']->getToken();
 
         $collection = $api['dataaccess.mongoodm.connection']()->selectCollection($api['config']['mongoodm']['default_database'], $_resourceClass);
 
-        $m_id = new \MongoId($id);
+        if(\MongoId::isvalid($id)) {
+            $m_id = new \MongoId($id);
+        } else {
+            $m_id = $id;
+        }
 
         switch ($request->getMethod()) {
             case 'GET':
