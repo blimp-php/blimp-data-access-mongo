@@ -4,11 +4,11 @@ namespace Blimp\DataAccess\Documents;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
 /** @ODM\Document */
-class GeoJSONFeatureCollection extends BlimpDocument {
+class GeoJsonFeatureCollection extends BlimpDocument {
     /** @ODM\String */
     private $type = 'FeatureCollection';
 
-    /** @ODM\EmbedMany(targetDocument="GeoJSONFeature") */
+    /** @ODM\EmbedMany(targetDocument="GeoJsonFeature") */
     private $features;
 
     public function getType() {

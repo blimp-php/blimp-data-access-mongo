@@ -3,8 +3,8 @@ namespace Blimp\DataAccess\Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
-/** @ODM\EmbedDocument */
-class GeoJSONGeometry {
+/** @ODM\EmbeddedDocument */
+class GeoJsonGeometry {
     /** @ODM\String */
     private $type;
 

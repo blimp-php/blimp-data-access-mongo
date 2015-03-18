@@ -100,7 +100,9 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
         });
 
         $api['dataaccess.mongoodm.mappings'] = function() {
-            return [];
+            $mappings = [['dir' => __DIR__ . '/Documents', 'prefix' => 'Blimp\\DataAccess\\Documents\\']];
+
+            return $mappings;
         };
 
         $api['dataaccess.mongoodm.mappingdriver'] = $api->protect(function ($name = null) use ($api) {

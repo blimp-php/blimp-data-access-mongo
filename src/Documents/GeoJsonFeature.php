@@ -3,14 +3,15 @@ namespace Blimp\DataAccess\Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
-/** @ODM\Document
- * @Index(keys={"geometry"="2dsphere"})
+/**
+ * @ODM\Document
+ * @ODM\Index(keys={"geometry"="2dsphere"})
 */
-class GeoJSONFeature extends BlimpDocument {
+class GeoJsonFeature extends BlimpDocument {
     /** @ODM\String */
     private $type = 'Feature';
 
-    /** @ODM\EmbedOne(targetDocument="GeoJSONGeometry") */
+    /** @ODM\EmbedOne(targetDocument="GeoJsonGeometry") */
     private $geometry;
 
     /** @ODM\Hash */
