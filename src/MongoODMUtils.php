@@ -243,29 +243,77 @@ class MongoODMUtils {
                 $current_value = $getter->invoke($item);
 
                 if(in_array($fieldMapping['type'], ['one', 'many'])) {
-                    if($fieldMapping['isOwningSide'] && $fieldMapping['isCascadePersist']) {
+                    if($fieldMapping['isOwningSide']) {
                         $c = new \ReflectionClass($fieldMapping['targetDocument']);
 
                         if($fieldMapping['type'] == 'one') {
-                            if($current_value == null) {
+                            $is_ref = false;
+
+                            if($fieldMapping['embedded']) {
+                                // it's an embedded value, replace it
                                 $current_value = $c->newInstance();
+                            } else {
+                                // it's a reference
+                                $current_id = $current_value != null ? $current_value->getId() : null;
+                                $new_id = is_scalar($value) ? $value : (!empty($value['id']) ? $value['id'] : null);
+
+                                if($fieldMapping['isCascadePersist']) {
+                                    // the new/modified value will be persisted
+
+                                    if($current_id != $new_id) {
+                                        // it's a new/different value
+                                        $current_value = $c->newInstance();
+                                    }
+                                } else if($new_id !== null) {
+                                    // just keep the reference
+                                    $is_ref = true;
+
+                                    if(\MongoId::isValid($new_id)) {
+                                        $current_value = $dm->getPartialReference($fieldMapping['targetDocument'], new \MongoId($new_id));
+                                    } else {
+                                        $current_value = $dm->getPartialReference($fieldMapping['targetDocument'], $new_id);
+                                    }
+                                } else {
+                                    // clear the field
+                                    $current_value = null;
+                                }
                             }
 
-                            $this->convertToBlimpDocument($value, $current_value, $patch);
+                            if($current_value !== null && !$is_ref) {
+                                $this->convertToBlimpDocument($value, $current_value, $patch);
+                            }
                         } else {
                             $current_value = new ArrayCollection();
 
                             foreach ($value as $v) {
                                 $new_value = null;
-                                if(!$fieldMapping['embedded'] && array_key_exists('id', $data)) {
-                                    $new_value = $dm->find($fieldMapping['targetDocument'], $data['id']);
-                                }
+                                $is_ref = false;
 
-                                if($new_value == null) {
+                                if($fieldMapping['embedded']) {
+                                    // it's an embedded value, replace it
                                     $new_value = $c->newInstance();
+                                } else {
+                                    // it's a reference
+                                    $new_id = is_scalar($value) ? $value : (!empty($value['id']) ? $value['id'] : null);
+
+                                    if($fieldMapping['isCascadePersist']) {
+                                        // the value will be persisted
+                                        $new_value = $c->newInstance();
+                                    } else if($new_id !== null) {
+                                        // just keep the reference
+                                        $is_ref = true;
+
+                                        if(\MongoId::isValid($new_id)) {
+                                            $new_value = $dm->getPartialReference($fieldMapping['targetDocument'], new \MongoId($new_id));
+                                        } else {
+                                            $new_value = $dm->getPartialReference($fieldMapping['targetDocument'], $new_id);
+                                        }
+                                    }
                                 }
 
-                                $this->convertToBlimpDocument($v, $new_value, $patch);
+                                if($new_value !== null && !$is_ref) {
+                                    $this->convertToBlimpDocument($v, $new_value, $patch);
+                                }
 
                                 $current_value->add($new_value);
                             }
