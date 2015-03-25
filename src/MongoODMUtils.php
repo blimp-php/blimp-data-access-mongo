@@ -213,7 +213,7 @@ class MongoODMUtils {
         }
     }
 
-    public function convertToBlimpDocument($data, &$item, $patch =  true) {
+    public function convertToBlimpDocument($data, &$item, $patch = true) {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
         $cmf = $dm->getMetadataFactory();
@@ -222,7 +222,7 @@ class MongoODMUtils {
         foreach ($class->fieldMappings as $fieldMapping) {
             $key = $fieldMapping['fieldName'];
 
-            if(in_array($key, ['created', 'updated'])) {
+            if(in_array($key, ['id', 'created', 'createdBy', 'updated', 'updatedBy'])) {
                 continue;
             }
 

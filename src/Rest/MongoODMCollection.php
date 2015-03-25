@@ -13,6 +13,10 @@ class MongoODMCollection {
             throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
         }
 
+        if ($_idField == null) {
+            $_idField = 'id';
+        }
+
         $token = null;
         if ($api->offsetExists('security')) {
             $token = $api['security']->getToken();
@@ -116,36 +120,21 @@ class MongoODMCollection {
                 $idProperty = new \ReflectionProperty($_resourceClass, 'id');
                 $anot = $api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotation($idProperty, '\Doctrine\ODM\MongoDB\Mapping\Annotations\Id');
 
-                if (empty($anot->strategy) || strtoupper($anot->strategy) == 'NONE') {
-                    $id = $item->getId();
-
-                    if (empty($id) && !empty($_idField)) {
-                        $id = $data[$_idField];
-                        if ($_idLowercase) {
-                            $id = strtolower($id);
-                        }
-
-                        $item->setId($id);
+                if (!empty($anot->strategy) && !empty($anot->options) && !empty($anot->options['class']) && strtoupper($anot->strategy) === 'CUSTOM' && $anot->options['class'] === '\Blimp\DataAccess\BlimpIdProvider') {
+                    $id = $data[$_idField];
+                    if ($_idLowercase) {
+                        $id = strtolower($id);
                     }
 
+                    $item->_custom_id = $id;
+
                     if (empty($id)) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy set to NONE and no Id provided");
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy delegated to BlimpIdProvider and no Id provided");
                     } else {
                         $check = $dm->find($_resourceClass, $id);
 
                         if ($check != null) {
-                            throw new BlimpHttpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy set to NONE and provided Id already exists");
-                        }
-                    }
-                }
-
-                $has_owner = method_exists($_resourceClass, 'setOwner');
-                if($has_owner) {
-                    $user = $token !== null ? $token->getUser() : null;
-
-                    if($user != null) {
-                        if(!$can_create || $item->getOwner() == null) {
-                            $item->setOwner($token->getUser());
+                            throw new BlimpHttpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy delegated to BlimpIdProvider and provided Id already exists");
                         }
                     }
                 }
