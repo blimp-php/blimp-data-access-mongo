@@ -41,12 +41,17 @@ class BlimpDocument {
      */
     protected $updatedBy;
 
-    protected function setId($id) {
-        $this->id = $id;
+    public function setId($id) {
+        if($this instanceof \Doctrine\ODM\MongoDB\Proxy\Proxy) {
+            throw new \Exception("ID is immutable");
+        }
+
+        $this->id = null;
+        $this->_custom_id = $id;
     }
 
     public function getId() {
-        return $this->id;
+        return $this->id != null ? $this->id : $this->_custom_id;
     }
 
     public function setOwner($owner) {

@@ -126,17 +126,18 @@ class MongoODMCollection {
                         $id = strtolower($id);
                     }
 
-                    $item->_custom_id = $id;
-
                     if (empty($id)) {
                         throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy delegated to BlimpIdProvider and no Id provided");
                     } else {
+                        // TODO catch exception instead of preventive check
                         $check = $dm->find($_resourceClass, $id);
 
                         if ($check != null) {
                             throw new BlimpHttpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy delegated to BlimpIdProvider and provided Id already exists");
                         }
                     }
+
+                    $item->setId($id);
                 }
 
                 $dm->persist($item);
