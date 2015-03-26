@@ -146,11 +146,10 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
                     }
                 }
 
+                $annotation_reader = $api['dataaccess.doctrine.annotation.reader'];
                 $chain = new MappingDriverChain();
 
                 foreach ($drivers as $driverType => $driverPaths) {
-                    $annotation_reader = $api['dataaccess.doctrine.annotation.reader'];
-
                     array_unshift($driverPaths, __DIR__ . '/Documents');
 
                     $annotationDriver = new AnnotationDriver(
@@ -162,6 +161,8 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
                         $chain->addDriver($annotationDriver, $prefix);
                     }
                 }
+
+                \Gedmo\DoctrineExtensions::registerMappingIntoDriverChainMongodbODM($chain, $annotation_reader);
 
                 $api['dataaccess.mongoodm.mappingdriver.' . $name] = $chain;
             }
