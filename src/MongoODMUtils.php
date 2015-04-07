@@ -10,6 +10,121 @@ class MongoODMUtils {
         $this->api = $api;
     }
 
+    private function _pre_check($_securityDomain, $permission) {
+        $can_doit = $this->api['security.permitions.check']($_securityDomain, $permission);
+        $can_doit_self = $this->api['security.permitions.check']($_securityDomain, 'self_'.$permission);
+
+        if(!$can_doit && !$can_doit_self) {
+            $this->api['security.permission.denied']($_securityDomain.':'.$permission.',self_'.$permission);
+        }
+
+        if(!$can_doit) {
+            if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
+                $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+            }
+        }
+
+        return $can_doit;
+    }
+
+    private function _post_check($can_doit, $item, $user, $_securityDomain, $permission) {
+        if(!$can_doit) {
+            $owner = null;
+
+            if(method_exists($item, 'getOwner')) {
+                $owner = $item->getOwner();
+            }
+
+            if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
+                $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+            }
+        }
+    }
+
+    private function _get($_resourceClass, $id, $contentLang = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
+        $dm = $this->api['dataaccess.mongoodm.documentmanager']();
+
+        $query_builder = $dm->createQueryBuilder();
+        $query_builder->eagerCursor(true);
+        $query_builder->find($_resourceClass);
+
+        $query_builder->field('_id')->equals($id);
+
+        if($parent_id != null) {
+            if ($_parentResourceClass == null) {
+                throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
+            }
+
+            if ($_parentIdField == null) {
+                throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
+            }
+
+            $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
+
+            $query_builder->field($_parentIdField)->references($ref);
+        }
+
+        if(!empty($contentLang)) {
+            $this->api['dataaccess.doctrine.translatable.listener']->setTranslatableLocale($contentLang);
+        }
+
+        $query = $query_builder->getQuery();
+
+        $item = $query->getSingleResult();
+
+        if ($item == null) {
+            throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
+        }
+
+        return $item;
+    }
+
+    public function get($_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
+        $can_doit = $this->_pre_check($_securityDomain, 'get');
+
+        $item = $this->_get($_resourceClass, $id, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
+
+        $this->_post_check($can_doit, $item, $user, $_securityDomain, 'get');
+
+        return $item;
+    }
+
+    public function edit($patch, $data, $_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
+        $can_doit = $this->_pre_check($_securityDomain, 'edit');
+
+        $item = $this->_get($_resourceClass, $id, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
+
+        $this->_post_check($can_doit, $item, $user, $_securityDomain, 'edit');
+
+        $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item, $patch);
+
+        if($contentLang !== null && method_exists($item, 'setTranslatableLocale')) {
+            $item->setTranslatableLocale($contentLang);
+        }
+
+        $dm = $this->api['dataaccess.mongoodm.documentmanager']();
+
+        $dm->persist($item);
+        $dm->flush($item);
+
+        return $item;
+    }
+
+    public function delete($_resourceClass, $id, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
+        $can_doit = $this->_pre_check($_securityDomain, 'delete');
+
+        $item = $this->_get($_resourceClass, $id, null, $_parentResourceClass, $_parentIdField, $parent_id);
+
+        $this->_post_check($can_doit, $item, $user, $_securityDomain, 'delete');
+
+        $dm = $this->api['dataaccess.mongoodm.documentmanager']();
+
+        $dm->remove($item);
+        $dm->flush($item);
+
+        return $item;
+    }
+
     public function parseRequestToQuery($request, $query_builder) {
         $query_builder->eagerCursor(true);
 
@@ -171,7 +286,7 @@ class MongoODMUtils {
      *
      * @return \stdClass
      */
-    public function toStdClass($doc) {
+    public function toStdClass($doc, $level = 0) {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
         $cmf = $dm->getMetadataFactory();
@@ -180,13 +295,13 @@ class MongoODMUtils {
         $document = new \stdClass();
 
         foreach ($class->fieldMappings as $fieldMapping) {
-            if($fieldMapping['isOwningSide']) {
+            if($fieldMapping['isOwningSide'] && empty($fieldMapping['inversedBy'])) {
                 $key = $fieldMapping['fieldName'];
 
                 $getter = new \ReflectionMethod($doc, 'get' . ucfirst($key));
 
                 $doc_value = $getter->invoke($doc);
-                $value = $this->formatValue($doc_value, $fieldMapping);
+                $value = $this->formatValue($doc_value, $fieldMapping, $level);
 
                 if ($value !== null) {
                     $document->$key = $value;
@@ -197,15 +312,23 @@ class MongoODMUtils {
         return $document;
     }
 
-    public function formatValue($value, $fieldMapping) {
+    private function formatValue($value, $fieldMapping, $level) {
+        if($level > 2) {
+            return null;
+        }
+
         if ($value === null) {
             return null;
         } else if ($fieldMapping['type'] == 'one') {
-            return $this->toStdClass($value);
+            if(method_exists($value, 'toStdClass')) {
+                return $value->toStdClass($this->api, $level+1);
+            }
+
+            return $this->toStdClass($value, $level+1);
         } else if($fieldMapping['type'] == 'many') {
             $prop = array();
             foreach ($value as $v) {
-                $prop[] = $this->formatValue($v, ['type' => 'one']);
+                $prop[] = $this->formatValue($v, ['type' => 'one'], $level);
             }
             return $prop;
         } else {

@@ -13,182 +13,43 @@ class MongoODMResource {
         }
 
         $token = $api['security']->getToken();
-
-        $dm = $api['dataaccess.mongoodm.documentmanager']();
+        $user = $token !== null ? $token->getUser() : null;
 
         switch ($request->getMethod()) {
             case 'GET':
-                $can_doit = $api['security.permitions.check']($_securityDomain, 'get');
-                $can_doit_self = $api['security.permitions.check']($_securityDomain, 'self_get');
+                $contentLang = $api['http.utils']->guessContentLang($request->getLanguages());
 
-                if(!$can_doit && !$can_doit_self) {
-                    $api['security.permission.denied']($_securityDomain.':get,self_get');
-                }
+                $result = $api['dataaccess.mongoodm.utils']->get($_resourceClass, $id, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                if(!$can_doit) {
-                    $user = $token !== null ? $token->getUser() : null;
-
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':get');
-                    }
-                }
-
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(true);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
-
-                if($parent_id != null) {
-                    if ($_parentResourceClass == null) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
-                    }
-
-                    if ($_parentIdField == null) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
-                    }
-
-                    $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
-
-                    $query_builder->field($_parentIdField)->references($ref);
-                }
-
-                $query = $query_builder->getQuery();
-
-                $item = $query->getSingleResult();
-
-                if ($item == null) {
-                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
-                }
-
-                if(!$can_doit) {
-                    $owner = null;
-
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
-                    }
-
-                    $user = $token->getUser();
-
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':get');
-                    }
-                }
-
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
-
-                return $result;
+                return $result->toStdClass($api);
 
                 break;
 
             case 'PUT':
             case 'PATCH':
-                $can_doit = $api['security.permitions.check']($_securityDomain, 'edit');
-                $can_doit_self = $api['security.permitions.check']($_securityDomain, 'self_edit');
+                $contentLang = $request->headers->get('Content-Language');
 
-                if(!$can_doit && !$can_doit_self) {
-                    $api['security.permission.denied']($_securityDomain.':edit,self_edit');
+                if(empty($contentLang)) {
+                    // TODO get it from somewhere
+                    $contentLang = 'pt-PT';
                 }
 
-                if(!$can_doit) {
-                    $user = $token !== null ? $token->getUser() : null;
-
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':edit');
-                    }
+                // TODO get it from somewhere
+                if(!in_array($contentLang, ['pt-PT', 'en-US', 'en'])) {
+                    throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, 'Content language not supported', ["requested" => $contentLang, "available" => ['pt-PT', 'en-US', 'en']]);
+                    break;
                 }
 
-                $data = $request->attributes->get('data');
+                $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $_resourceClass, $id, $contentLang, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(true);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
-
-                $query = $query_builder->getQuery();
-
-                $item = $query->getSingleResult();
-
-                if ($item == null) {
-                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
-                }
-
-                if(!$can_doit) {
-                    $owner = null;
-
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
-                    }
-
-                    $user = $token->getUser();
-
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':edit');
-                    }
-                }
-
-                $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item, $request->getMethod() == 'PATCH');
-
-                $dm->persist($item);
-                $dm->flush($item);
-
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
-
-                return $result;
+                return $result->toStdClass($api);
 
                 break;
 
             case 'DELETE':
-                $can_doit = $api['security.permitions.check']($_securityDomain, 'delete');
-                $can_doit_self = $api['security.permitions.check']($_securityDomain, 'self_delete');
+                $result = $api['dataaccess.mongoodm.utils']->delete($_resourceClass, $id, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                if(!$can_doit && !$can_doit_self) {
-                    $api['security.permission.denied']($_securityDomain.':delete,self_delete');
-                }
-
-                if(!$can_doit) {
-                    $user = $token !== null ? $token->getUser() : null;
-
-                    if($user == null || !($can_doit = is_a($user, $_resourceClass, false)) || $id != $user->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':delete');
-                    }
-                }
-
-                $query_builder = $dm->createQueryBuilder();
-                $query_builder->eagerCursor(false);
-                $query_builder->find($_resourceClass);
-
-                $query_builder->field('_id')->equals($id);
-
-                $query = $query_builder->getQuery();
-
-                $item = $query->getSingleResult();
-
-                if ($item == null) {
-                    throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
-                }
-
-                if(!$can_doit) {
-                    $owner = null;
-
-                    if(method_exists($item, 'getOwner')) {
-                        $owner = $item->getOwner();
-                    }
-
-                    $user = $token->getUser();
-
-                    if($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
-                        $api['security.permission.denied']($_securityDomain.':delete');
-                    }
-                }
-
-                $dm->remove($item);
-                $dm->flush($item);
-
-                $result = $api['dataaccess.mongoodm.utils']->toStdClass($item);
-
-                return $result;
+                return $result->toStdClass($api);
 
                 break;
 

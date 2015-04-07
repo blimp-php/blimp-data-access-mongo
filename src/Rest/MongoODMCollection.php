@@ -77,6 +77,27 @@ class MongoODMCollection {
                     $query_builder->field($_parentIdField)->references($ref);
                 }
 
+                $languages = $request->getLanguages();
+                if(!empty($languages)) {
+                    foreach ($languages as $lang) {
+                        $lang = str_replace('_', '-', $lang);
+                        // TODO get it from somewhere
+                        if(in_array($lang, ['pt-PT', 'en-US', 'en'])) {
+                            $contentLang = $lang;
+                            break;
+                        }
+                    }
+
+                    if(empty($contentLang)) {
+                        throw new BlimpHttpException(Response::HTTP_NOT_ACCEPTABLE, 'Requested language not supported', ["requested" => $request->headers->get('Accept-Language'), "available" => ['pt-PT', 'en-US', 'en']]);
+                    }
+                } else {
+                    // TODO get it from somewhere
+                    $contentLang = 'pt-PT';
+                }
+
+                $api['dataaccess.doctrine.translatable.listener']->setTranslatableLocale($contentLang);
+
                 $query = $query_builder->getQuery();
 
                 $cursor = $query->execute();
@@ -90,7 +111,7 @@ class MongoODMCollection {
                 $elements = array();
 
                 foreach ($cursor as $item) {
-                    $elements[] = $api['dataaccess.mongoodm.utils']->toStdClass($item);
+                    $elements[] = $item->toStdClass($api);
                 }
 
                 // TODO Links next and prev, both in $result->links and 'Links' header
@@ -138,6 +159,19 @@ class MongoODMCollection {
                     }
 
                     $item->setId($id);
+                }
+
+                if(method_exists($item, 'setTranslatableLocale')) {
+                    $contentLang = $request->headers->get('Content-Language');
+
+                    if(empty($contentLang)) {
+                        // TODO get it from somewhere
+                        $contentLang = 'pt-PT';
+                    }
+
+                    // TODO Reject if unsupported language
+
+                    $item->setTranslatableLocale($contentLang);
                 }
 
                 $dm->persist($item);

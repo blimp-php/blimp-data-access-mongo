@@ -93,4 +93,8 @@ class BlimpDocument {
     public function getUpdatedBy() {
         return $this->updatedBy;
     }
+
+    public function toStdClass($api, $level = 0) {
+        return $api['dataaccess.mongoodm.utils']->toStdClass($this, $level);
+    }
 }
