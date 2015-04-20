@@ -21,106 +21,19 @@ class MongoODMCollection {
         if ($api->offsetExists('security')) {
             $token = $api['security']->getToken();
         }
+        $user = $token !== null ? $token->getUser() : null;
 
         $dm = $api['dataaccess.mongoodm.documentmanager']();
 
         switch ($request->getMethod()) {
             case 'GET':
-                $can_doit = $api['security.permitions.check']($_securityDomain, 'list');
-                $can_doit_self = $api['security.permitions.check']($_securityDomain, 'self_list');
+                $contentLang = $api['http.utils']->guessContentLang($request->query->get('locale'), $request->getLanguages());
 
-                if(!$can_doit && !$can_doit_self) {
-                    $api['security.permission.denied']($_securityDomain.':list,self_list');
-                }
-
-                $limit_to_id = null;
-                $limit_to_owner = null;
-
-                if(!$can_doit) {
-                    $user = $token !== null ? $token->getUser() : null;
-
-                    if($user == null) {
-                        $api['security.permission.denied']($_securityDomain.':list');
-                    }
-
-                    if(is_a($user, $_resourceClass, false)) {
-                        $limit_to_id = $user->getId();
-                    } else if(method_exists($_resourceClass, 'getOwner')) {
-                        $limit_to_owner = $user;
-                    } else {
-                        $api['security.permission.denied']($_securityDomain.':list');
-                    }
-                }
-
-                $query_builder = $dm->createQueryBuilder();
-                $api['dataaccess.mongoodm.utils']->parseRequestToQuery($request, $query_builder);
-
-                $query_builder->find($_resourceClass);
-
-                if($limit_to_id != null) {
-                    $query_builder->field('_id')->equals($limit_to_id);
-                } else if($limit_to_owner != null) {
-                    $query_builder->field('owner')->references($limit_to_owner);
-                }
-
-                if($parent_id != null) {
-                    if ($_parentResourceClass == null) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
-                    }
-
-                    if ($_parentIdField == null) {
-                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
-                    }
-
-                    $ref = $dm->getPartialReference($_parentResourceClass, $parent_id);
-
-                    $query_builder->field($_parentIdField)->references($ref);
-                }
-
-                $languages = $request->getLanguages();
-                if(!empty($languages)) {
-                    foreach ($languages as $lang) {
-                        $lang = str_replace('_', '-', $lang);
-                        // TODO get it from somewhere
-                        if(in_array($lang, ['pt-PT', 'en-US', 'en'])) {
-                            $contentLang = $lang;
-                            break;
-                        }
-                    }
-
-                    if(empty($contentLang)) {
-                        throw new BlimpHttpException(Response::HTTP_NOT_ACCEPTABLE, 'Requested language not supported', ["requested" => $request->headers->get('Accept-Language'), "available" => ['pt-PT', 'en-US', 'en']]);
-                    }
-                } else {
-                    // TODO get it from somewhere
-                    $contentLang = 'pt-PT';
-                }
-
-                $api['dataaccess.doctrine.translatable.listener']->setTranslatableLocale($contentLang);
-
-                $query = $query_builder->getQuery();
-
-                $cursor = $query->execute();
-
-                $count = $cursor->count();
-
-                if ($count == 0) {
-                    throw new BlimpHttpException(Response::HTTP_NO_CONTENT, "No content");
-                }
-
-                $elements = array();
-
-                foreach ($cursor as $item) {
-                    $elements[] = $item->toStdClass($api);
-                }
+                $result = $api['dataaccess.mongoodm.utils']->search($_resourceClass, $request->query, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
                 // TODO Links next and prev, both in $result->links and 'Links' header
 
-                $result = new \stdclass();
-                $result->elements = $elements;
-                $result->count = $count;
-
-                return $result;
+                return $api['dataaccess.mongoodm.utils']->toStdClass($result);
 
                 break;
 

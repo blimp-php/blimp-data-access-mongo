@@ -2,6 +2,7 @@
 namespace Blimp\DataAccess;
 
 use Pimple\ServiceProviderInterface;
+use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Persistence\Mapping\Driver\MappingDriverChain;
 use Doctrine\MongoDB\Connection;
 use Doctrine\ODM\MongoDB\Configuration;
@@ -12,6 +13,22 @@ use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
 class MongoODMServiceProvider implements ServiceProviderInterface {
     public function register(Container $api) {
+        $api['dataaccess.mongoodm.date_format'] = function($api) {
+            if($api->offsetExists('http.request')) {
+                $request = $api['http.request'];
+                $format = $request->query->get('date_format');
+                if(!empty($format)) {
+                    return $format;
+                }
+            }
+
+            if(!empty($api['config']['mongoodm']['date_format'])) {
+                return $api['config']['mongoodm']['date_format'];
+            }
+
+            return null;
+        };
+
         $api['dataaccess.mongoodm.utils'] = function($api) {
             return new MongoODMUtils($api);
         };
@@ -162,6 +179,8 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
                     }
                 }
 
+                AnnotationRegistry::registerFile(__DIR__.'/BlimpAnnotation.php');
+
                 \Gedmo\DoctrineExtensions::registerMappingIntoDriverChainMongodbODM($chain, $annotation_reader);
 
                 $api['dataaccess.mongoodm.mappingdriver.' . $name] = $chain;
@@ -252,6 +271,7 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
     private function addMongoODMSection($rootNode) {
         $rootNode
             ->children()
+                ->scalarNode('date_format')->defaultValue('')->end()
                 ->scalarNode('proxy_namespace')->defaultValue('MongoDBODMProxies')->end()
                 ->scalarNode('proxy_dir')->defaultValue('/Proxies')->end()
                 ->scalarNode('auto_generate_proxy_classes')->defaultValue(true)->end()

@@ -9,13 +9,13 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 */
 class GeoJsonFeature extends BlimpDocument {
     /** @ODM\String */
-    private $type = 'Feature';
+    protected $type = 'Feature';
 
     /** @ODM\EmbedOne(targetDocument="GeoJsonGeometry") */
-    private $geometry;
+    protected $geometry;
 
     /** @ODM\Hash */
-    private $properties;
+    protected $properties;
 
     public function setId($id) {
         $this->id = $id;

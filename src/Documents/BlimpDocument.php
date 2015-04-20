@@ -4,21 +4,28 @@ namespace Blimp\DataAccess\Documents;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 use Gedmo\Mapping\Annotation as Gedmo;
 
+use Blimp\DataAccess as Blimp;
+
 /** @ODM\MappedSuperclass */
 class BlimpDocument {
     public $_custom_id;
 
-    /** @ODM\Id */
+    /**
+      * @ODM\Id
+     * @Blimp\BlimpAnnotation(return="yes")
+      */
     protected $id;
 
     /**
      * @ODM\ReferenceOne
      * @Gedmo\Blameable(on="create")
+     * @Blimp\BlimpAnnotation(return="direct")
      */
     protected $owner;
 
     /**
      * @Gedmo\Timestampable(on="create")
+     * @Blimp\BlimpAnnotation(return="direct")
      * @ODM\Date
      */
     protected $created;
@@ -26,17 +33,20 @@ class BlimpDocument {
     /**
      * @ODM\String
      * @Gedmo\Blameable(on="create")
+     * @Blimp\BlimpAnnotation(return="direct")
      */
     protected $createdBy;
 
     /**
      * @Gedmo\Timestampable(on="update")
+     * @Blimp\BlimpAnnotation(return="direct")
      * @ODM\Date
      */
     protected $updated;
 
     /**
      * @ODM\String
+     * @Blimp\BlimpAnnotation(return="direct")
      * @Gedmo\Blameable
      */
     protected $updatedBy;
@@ -94,7 +104,7 @@ class BlimpDocument {
         return $this->updatedBy;
     }
 
-    public function toStdClass($api, $level = 0) {
-        return $api['dataaccess.mongoodm.utils']->toStdClass($this, $level);
+    public function toStdClass($api, $level = 0, $to_embed = []) {
+        return $api['dataaccess.mongoodm.utils']->toStdClass($this, $level, $to_embed);
     }
 }

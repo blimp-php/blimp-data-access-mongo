@@ -12,12 +12,15 @@ class MongoODMResource {
             throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
         }
 
-        $token = $api['security']->getToken();
+        $token = null;
+        if ($api->offsetExists('security')) {
+            $token = $api['security']->getToken();
+        }
         $user = $token !== null ? $token->getUser() : null;
 
         switch ($request->getMethod()) {
             case 'GET':
-                $contentLang = $api['http.utils']->guessContentLang($request->getLanguages());
+                $contentLang = $api['http.utils']->guessContentLang($request->query->get('locale'), $request->getLanguages());
 
                 $result = $api['dataaccess.mongoodm.utils']->get($_resourceClass, $id, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
