@@ -74,11 +74,14 @@ class MongoODMUtils {
         $query_builder->eagerCursor(true);
         $query_builder->find($_resourceClass);
 
+        $fields_to_get = array();
+        $fields_to_embed = array();
+
         $map = array();
         $reduce = array();
 
         if(!empty($query)) {
-            $this->parseRequestToQuery($_resourceClass, $query, $query_builder, $map, $reduce);
+            $this->parseRequestToQuery($_resourceClass, $query, $query_builder, $map, $reduce, $fields_to_get, $fields_to_embed);
         }
 
         if(!empty($id)) {
@@ -181,6 +184,13 @@ class MongoODMUtils {
 
         $result['elements'] = $elements;
 
+        $result['_meta'] = [
+            "fields_to_get" => $fields_to_get,
+            "fields_to_embed" => $fields_to_embed,
+            "map" => $map,
+            "reduce" => $reduce
+        ];
+
         return $result;
     }
 
@@ -234,6 +244,10 @@ class MongoODMUtils {
                 $command = array_shift($params);
 
                 switch ($command) {
+                    case 'replace':
+                        $field_value .= '.replace('.implode(', ', $params).')';
+                        break;
+
                     case 'upper':
                         $field_value .= '.toUpperCase()';
                         break;
@@ -371,27 +385,29 @@ class MongoODMUtils {
 
         $result = $this->_get($_resourceClass, $query, $can_doit['id'], $can_doit['owner'], $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
-        if (isset($result->count) && $result->count === 0) {
+        if (isset($result['count']) && $result['count'] === 0) {
             throw new BlimpHttpException(Response::HTTP_NO_CONTENT, "No content");
         }
 
-        return $result;
+        return $this->toStdClass($result);
     }
 
-    public function get($_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
+    public function get($_resourceClass, $id, $query, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
         $can_doit = $this->_pre_check($_securityDomain, 'get', $user, $id);
 
-        $result = $this->_get($_resourceClass, null, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
+        $result = $this->_get($_resourceClass, $query, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
-        if ($result->count === 0) {
+        if ($result['count'] === 0) {
             throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
         }
 
-        $item = $result->elements[0];
+        $item = $result['elements'][0];
 
         $this->_post_check($can_doit, $_securityDomain, 'get', $user, $item);
 
-        return $item;
+        $res = $this->toStdClass($result);
+
+        return $res['elements'][0];
     }
 
     public function edit($patch, $data, $_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
@@ -399,11 +415,11 @@ class MongoODMUtils {
 
         $result = $this->_get($_resourceClass, null, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
-        if ($result->count === 0) {
+        if ($result['count'] === 0) {
             throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
         }
 
-        $item = $result->elements[0];
+        $item = $result['elements'][0];
 
         $this->_post_check($can_doit, $_securityDomain, 'edit', $user, $item);
 
@@ -418,7 +434,7 @@ class MongoODMUtils {
         $dm->persist($item);
         $dm->flush($item);
 
-        return $item;
+        return $this->toStdClass($item);
     }
 
     public function delete($_resourceClass, $id, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null) {
@@ -426,11 +442,11 @@ class MongoODMUtils {
 
         $result = $this->_get($_resourceClass, null, $id, null, null, $_parentResourceClass, $_parentIdField, $parent_id);
 
-        if ($result->count === 0) {
+        if ($result['count'] === 0) {
             throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
         }
 
-        $item = $result->elements[0];
+        $item = $result['elements'][0];
 
         $this->_post_check($can_doit, $_securityDomain, 'delete', $user, $item);
 
@@ -439,10 +455,10 @@ class MongoODMUtils {
         $dm->remove($item);
         $dm->flush($item);
 
-        return $item;
+        return $this->toStdClass($item);
     }
 
-    public function parseRequestToQuery($_resourceClass, $query, $query_builder, &$map = null, &$reduce = null) {
+    public function parseRequestToQuery($_resourceClass, $query, $query_builder, &$map, &$reduce, &$fields_to_get, &$fields_to_embed) {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
         $cmf = $dm->getMetadataFactory();
@@ -460,7 +476,37 @@ class MongoODMUtils {
 
 
         foreach ($query as $key => $value) {
-            if ($key == "fields" || $key == "embed") {
+            if ($key == "fields") {
+                $ftg = explode(',', $value);
+
+                foreach ($ftg as $path) {
+                    $sub_ftg = explode('.', $path);
+                    $sub_field = array_shift($sub_ftg);
+
+                    if(!isset($fields_to_get[$sub_field])) {
+                        $fields_to_get[$sub_field] = [];
+                    }
+
+                    $fields_to_get[$sub_field][] = $sub_ftg;
+                }
+
+                continue;
+            }
+
+            if ($key == "embed") {
+                $fte = explode(',', $value);
+
+                foreach ($fte as $path) {
+                    $sub_fte = explode('.', $path);
+                    $sub_field = array_shift($sub_fte);
+
+                    if(!isset($fields_to_embed[$sub_field])) {
+                        $fields_to_embed[$sub_field] = [];
+                    }
+
+                    $fields_to_embed[$sub_field][] = $sub_fte;
+                }
+
                 continue;
             }
 
@@ -792,12 +838,21 @@ class MongoODMUtils {
         return $query_builder;
     }
 
-    private function _toArray($arr, $level = 0, $to_embed = array()) {
+    private function _toArray($arr, $level = 0, $to_get = array(), $to_embed = array()) {
         $array = array();
 
+        if(isset($arr['_meta'])) {
+            $to_get = $arr['_meta']['fields_to_get'];
+            $to_embed = $arr['_meta']['fields_to_embed'];
+        }
+
         foreach ($arr as $key => $value) {
+            if($key === '_meta') {
+                continue;
+            }
+
             if(is_array($value) || is_object($value)) {
-                $array[$key] = $this->toStdClass($value, $level, $to_embed);
+                $array[$key] = $this->toStdClass($value, $level, $to_get, $to_embed);
             } else {
                 $array[$key] = $value;
             }
@@ -811,9 +866,9 @@ class MongoODMUtils {
      *
      * @return \stdClass
      */
-    public function toStdClass($doc, $level = 0, $to_embed = array()) {
+    public function toStdClass($doc, $level = 0, $to_get = array(), $to_embed = array()) {
         if(is_array($doc)) {
-            return $this->_toArray($doc, $level, $to_embed);
+            return $this->_toArray($doc, $level, $to_get, $to_embed);
         }
 
         if(is_a($doc, 'MongoDate')) {
@@ -825,20 +880,35 @@ class MongoODMUtils {
         $cmf = $dm->getMetadataFactory();
         $class = $cmf->getMetadataFor(get_class($doc));
 
-        $document = new \stdClass();
+        $document = [];
 
         $fields = $class->getFieldNames();
+
+        $ftg = !empty($to_get);
+        $ftg_super_wildcard = $ftg && ($to_get === true || array_key_exists('**', $to_get));
+        $ftg_wildcard = $ftg && ($ftg_super_wildcard || array_key_exists('*', $to_get));
+
+        $fte = !empty($to_embed);
+        $fte_super_wildcard = $fte && ($to_embed === true || array_key_exists('**', $to_embed));
+        $fte_wildcard = $fte && ($fte_super_wildcard || array_key_exists('*', $to_embed));
 
         foreach ($fields as $key) {
             $fieldMapping = $class->getFieldMapping($key);
 
-            if($fieldMapping['isOwningSide'] && empty($fieldMapping['inversedBy'])) {
+            $embedded_field = $fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many';
+
+            $get_it = !$ftg && !$embedded_field
+                        || $key === 'id'
+                        || $ftg && (!$embedded_field && $ftg_wildcard || is_array($to_get) && array_key_exists($key, $to_get));
+
+            $embed_it = $fte && $embedded_field && ($fte_wildcard || array_key_exists($key, $to_embed));
+
+            if(!$ftg) {
                 $prop = new \ReflectionProperty($doc, $key);
                 $prop->setAccessible(true);
 
                 $propertyAnnotations = $this->api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotations($prop);
 
-                $get_it = $fieldMapping['type'] !== 'one' && $fieldMapping['type'] !== 'many';
                 foreach ($propertyAnnotations as $anot) {
                     if($anot instanceof \Blimp\DataAccess\BlimpAnnotation) {
                         if($anot->return !== 'default') {
@@ -884,20 +954,60 @@ class MongoODMUtils {
                         }
                     }
                 }
+            }
 
-                $field_embed = [];
-                if (!$get_it) {
-                    if(!array_key_exists($key, $to_embed)) {
-                        continue;
+            if($get_it || $embed_it) {
+                $fields_to_get = [];
+                if($ftg) {
+                    $sub_ftgs = [];
+                    if(is_array($to_get)) {
+                        if(array_key_exists($key, $to_get)) {
+                            $sub_ftgs = array_merge($sub_ftgs, $to_get[$key]);
+                        }
+
+                        if(array_key_exists('*', $to_get)) {
+                            $sub_ftgs = array_merge($sub_ftgs, $to_get['*']);
+                        }
                     }
 
-                    $field_embed = $to_embed[$key];
-                    if($field_embed === false) {
-                        continue;
+                    if($ftg_super_wildcard) {
+                        $sub_ftgs = array_merge($sub_ftgs, [['**']]);
                     }
 
-                    if($field_embed === true) {
-                        $field_embed = [];
+                    foreach ($sub_ftgs as $sub_ftg) {
+                        if(!empty($sub_ftg)) {
+                            $sub_field = array_shift($sub_ftg);
+
+                            if(!isset($fields_to_get[$sub_field])) {
+                                $fields_to_get[$sub_field] = [];
+                            }
+
+                            $fields_to_get[$sub_field][] = $sub_ftg;
+                        }
+                    }
+                }
+
+                $fields_to_embed = [];
+                if($fte) {
+                    if($fte_super_wildcard) {
+                        $fields_to_embed = true;
+                    } else {
+                        $sub_ftes = [];
+                        if(array_key_exists($key, $to_embed)) {
+                            $sub_ftes = $to_embed[$key];
+                        } else if($fte_wildcard) {
+                            $sub_ftes = $to_embed['*'];
+                        }
+
+                        foreach ($sub_ftes as $sub_fte) {
+                            $sub_field = array_shift($sub_fte);
+
+                            if(!isset($fields_to_embed[$sub_field])) {
+                                $fields_to_embed[$sub_field] = [];
+                            }
+
+                            $fields_to_embed[$sub_field][] = $sub_fte;
+                        }
                     }
                 }
 
@@ -905,10 +1015,10 @@ class MongoODMUtils {
 
                 $doc_value = $getter->invoke($doc);
 
-                $value = $this->formatValue($doc_value, $fieldMapping, $level, $field_embed);
+                $value = $this->formatValue($doc_value, $fieldMapping, $level, $fields_to_get, $fields_to_embed);
 
                 if ($value !== null) {
-                    $document->$key = $value;
+                    $document[$key] = $value;
                 }
             }
         }
@@ -916,19 +1026,19 @@ class MongoODMUtils {
         return $document;
     }
 
-    private function formatValue($value, $fieldMapping, $level, $to_embed) {
+    private function formatValue($value, $fieldMapping, $level, $to_get, $to_embed) {
         if ($value === null) {
             return null;
         } else if ($fieldMapping['type'] == 'one') {
             if(method_exists($value, 'toStdClass')) {
-                return $value->toStdClass($this->api, $level+1, $to_embed);
+                return $value->toStdClass($this->api, $level+1, $to_get, $to_embed);
             }
 
-            return $this->toStdClass($value, $level+1, $to_embed);
+            return $this->toStdClass($value, $level+1, $to_get, $to_embed);
         } else if($fieldMapping['type'] == 'many') {
             $prop = array();
             foreach ($value as $v) {
-                $prop[] = $this->formatValue($v, ['type' => 'one'], $level, $to_embed);
+                $prop[] = $this->formatValue($v, ['type' => 'one'], $level, $to_get, $to_embed);
             }
             return $prop;
         } else if($fieldMapping['type'] == 'date') {

@@ -92,9 +92,9 @@ class MongoCollection {
 
                 // TODO Links next and prev, both in $result->links and 'Links' header
 
-                $result = new \stdclass();
-                $result->elements = $elements;
-                $result->count = $count;
+                $result = array();
+                $result['count'] = $count;
+                $result['elements'] = $elements;
 
                 return $result;
 

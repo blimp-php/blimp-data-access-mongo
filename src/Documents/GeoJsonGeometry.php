@@ -6,10 +6,10 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 /** @ODM\EmbeddedDocument */
 class GeoJsonGeometry {
     /** @ODM\String */
-    private $type;
+    protected $type;
 
     /** @ODM\Collection */
-    private $coordinates = array();
+    protected $coordinates = array();
 
     public function setType($type) {
         $this->type = $type;

@@ -22,9 +22,9 @@ class MongoODMResource {
             case 'GET':
                 $contentLang = $api['http.utils']->guessContentLang($request->query->get('locale'), $request->getLanguages());
 
-                $result = $api['dataaccess.mongoodm.utils']->get($_resourceClass, $id, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
+                $result = $api['dataaccess.mongoodm.utils']->get($_resourceClass, $id, $request->query, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                return $result->toStdClass($api);
+                return $result;
 
                 break;
 
@@ -45,14 +45,14 @@ class MongoODMResource {
 
                 $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $_resourceClass, $id, $contentLang, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                return $result->toStdClass($api);
+                return $result;
 
                 break;
 
             case 'DELETE':
                 $result = $api['dataaccess.mongoodm.utils']->delete($_resourceClass, $id, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
-                return $result->toStdClass($api);
+                return $result;
 
                 break;
 

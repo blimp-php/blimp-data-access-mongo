@@ -104,7 +104,7 @@ class BlimpDocument {
         return $this->updatedBy;
     }
 
-    public function toStdClass($api, $level = 0, $to_embed = []) {
-        return $api['dataaccess.mongoodm.utils']->toStdClass($this, $level, $to_embed);
+    public function toStdClass($api, $level = 0, $to_get = [], $to_embed = []) {
+        return $api['dataaccess.mongoodm.utils']->toStdClass($this, $level, $to_get, $to_embed);
     }
 }

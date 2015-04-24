@@ -8,13 +8,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class MongoODMCollection {
-    public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_idField = null, $_idLowercase = true, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
+    public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_idLowercase = true, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
             throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
-        }
-
-        if ($_idField == null) {
-            $_idField = 'id';
         }
 
         $token = null;
@@ -33,7 +29,7 @@ class MongoODMCollection {
 
                 // TODO Links next and prev, both in $result->links and 'Links' header
 
-                return $api['dataaccess.mongoodm.utils']->toStdClass($result);
+                return $result;
 
                 break;
 
@@ -55,14 +51,15 @@ class MongoODMCollection {
                 $anot = $api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotation($idProperty, '\Doctrine\ODM\MongoDB\Mapping\Annotations\Id');
 
                 if (!empty($anot->strategy) && !empty($anot->options) && !empty($anot->options['class']) && strtoupper($anot->strategy) === 'CUSTOM' && $anot->options['class'] === '\Blimp\DataAccess\BlimpIdProvider') {
-                    $id = $data[$_idField];
-                    if ($_idLowercase) {
-                        $id = strtolower($id);
-                    }
+                    $id = $data['id'];
 
                     if (empty($id)) {
                         throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy delegated to BlimpIdProvider and no Id provided");
                     } else {
+                        if ($_idLowercase) {
+                            $id = strtolower($id);
+                        }
+
                         // TODO catch exception instead of preventive check
                         $check = $dm->find($_resourceClass, $id);
 

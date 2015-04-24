@@ -6,10 +6,10 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 /** @ODM\Document */
 class GeoJsonFeatureCollection extends BlimpDocument {
     /** @ODM\String */
-    private $type = 'FeatureCollection';
+    protected $type = 'FeatureCollection';
 
     /** @ODM\EmbedMany(targetDocument="GeoJsonFeature") */
-    private $features;
+    protected $features;
 
     public function getType() {
         return $this->type;
