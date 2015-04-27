@@ -1,6 +1,6 @@
 {
     "name": "blimp/blimp-data-access-mongo",
-    "version": "0.1.5",
+    "version": "0.1.7",
     "type": "library",
     "description": "Blimp framework",
     "license": "LGPL-3.0+",

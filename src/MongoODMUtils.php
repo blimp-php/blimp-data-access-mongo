@@ -461,6 +461,12 @@ class MongoODMUtils {
     public function parseRequestToQuery($_resourceClass, $query, $query_builder, &$map, &$reduce, &$fields_to_get, &$fields_to_embed) {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
+        static $commands_translate = [
+            'nin' => 'notIn',
+            'eq' => 'equals',
+            'ne' => 'notEqual'
+        ];
+
         $cmf = $dm->getMetadataFactory();
         $class = $cmf->getMetadataFor($_resourceClass);
 
@@ -473,7 +479,6 @@ class MongoODMUtils {
 
         $fields = array();
         $fields_zero = array();
-
 
         foreach ($query as $key => $value) {
             if ($key == "fields") {
@@ -633,83 +638,60 @@ class MongoODMUtils {
                 continue;
             }
 
-            if (strlen($value) > 1 && strpos($value, '/') !== false) {
-                $bar_count = 0;
+            if(is_array($value)) {
+                $values = $value;
+            } else {
+                $values = [$value];
+            }
 
-                $parts = explode('/', $value);
+            foreach ($values as $mv) {
+                if (strlen($mv) > 1 && strpos($mv, '/') !== false) {
+                    $bar_count = 0;
 
-                $command = '';
-                $expression = '';
-                $options = '';
+                    $parts = explode('/', $mv);
 
-                foreach ($parts as $part) {
-                    if ($bar_count == 0) {
-                        $command = $part;
-                        ++$bar_count;
-                    } else if ($bar_count == 1) {
-                        $expression .= $part;
+                    $command = '';
+                    $expression = '';
+                    $options = '';
 
-                        if (strlen($expression) == 0 || substr($expression, strlen($expression) - 1) != '\\') {
+                    foreach ($parts as $part) {
+                        if ($bar_count == 0) {
+                            $command = $part;
+                            ++$bar_count;
+                        } else if ($bar_count == 1) {
+                            $expression .= $part;
+
+                            if (strlen($expression) == 0 || substr($expression, strlen($expression) - 1) != '\\') {
+                                ++$bar_count;
+                            } else {
+                                if (strlen($expression) > 0) {
+                                    $expression = substr($expression, 0, strlen($expression) - 1) . '/';
+                                }
+                            }
+                        } else if ($bar_count == 2) {
+                            $options = $part;
                             ++$bar_count;
                         } else {
-                            if (strlen($expression) > 0) {
-                                $expression = substr($expression, 0, strlen($expression) - 1) . '/';
-                            }
+                            ++$bar_count;
                         }
-                    } else if ($bar_count == 2) {
-                        $options = $part;
-                        ++$bar_count;
-                    } else {
-                        ++$bar_count;
                     }
-                }
 
-                if ($command == "m") {
-                    if ($bar_count == 3) {
-                        $query_builder->field($key)->equals(new \MongoRegex('/' . $expression . '/' . $options));
-
-                        continue;
-                    }
-                } else if ($command == "n") {
-                    if ($bar_count == 2) {
-                        if (is_numeric($expression)) {
-                            $float_expression = floatval($expression);
-                            $int_expression = intval($expression);
-
-                            if ($float_expression != $int_expression) {
-                                $query_builder->field($key)->equals($float_expression);
-                            } else {
-                                $query_builder->field($key)->equals($int_expression);
-                            }
+                    if ($command == "m") {
+                        if ($bar_count == 3) {
+                            $query_builder->field($key)->equals(new \MongoRegex('/' . $expression . '/' . $options));
 
                             continue;
-                        } else {
-                            $boolean_expression = strtolower($expression);
-
-                            if ($boolean_expression == "true" || $boolean_expression == "false") {
-                                $query_builder->field($key)->equals($boolean_expression == "true");
-
-                                continue;
-                            }
                         }
-
-                        continue;
-                    }
-                } else {
-                    try {
-                        $method = new \ReflectionMethod($query_builder, $command);
-
-                        $query_builder->field($key);
-
-                        if ($options == "n") {
+                    } else if ($command == "n") {
+                        if ($bar_count == 2) {
                             if (is_numeric($expression)) {
                                 $float_expression = floatval($expression);
                                 $int_expression = intval($expression);
 
                                 if ($float_expression != $int_expression) {
-                                    $method->invoke($query_builder, $float_expression);
+                                    $query_builder->field($key)->equals($float_expression);
                                 } else {
-                                    $method->invoke($query_builder, $int_expression);
+                                    $query_builder->field($key)->equals($int_expression);
                                 }
 
                                 continue;
@@ -717,34 +699,101 @@ class MongoODMUtils {
                                 $boolean_expression = strtolower($expression);
 
                                 if ($boolean_expression == "true" || $boolean_expression == "false") {
-                                    $method->invoke($query_builder, $boolean_expression == "true");
+                                    $query_builder->field($key)->equals($boolean_expression == "true");
 
                                     continue;
                                 }
                             }
+
+                            continue;
+                        }
+                    } else {
+                        $final_value = array($expression);
+
+                        $fieldMapping = $class->getFieldMapping($key);
+
+                        $array_expression = $command == "in" || $command == "nin";
+                        if ($array_expression) {
+                            $final_value = explode(',', $expression);
                         }
 
-                        $method->invoke($query_builder, $expression);
+                        if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                            foreach ($final_value as $fk => $fv) {
+                                if(!empty($fv)) {
+                                    $final_value[$fk] = $dm->createDBRef($dm->getReference($fieldMapping['targetDocument'], $fv), $fieldMapping)['$id'];
+                                }
+                            }
+                        } else if ($options == "n") {
+                            foreach ($final_value as $fk => $fv) {
+                                if (is_numeric($fv)) {
+                                    $float_expression = floatval($fv);
+                                    $int_expression = intval($fv);
 
-                        continue;
-                    } catch (\ReflectionException $e) {
+                                    if ($float_expression != $int_expression) {
+                                        $final_value[$fk] = $float_expression;
+                                    } else {
+                                        $final_value[$fk] = $int_expression;
+                                    }
+                                } else {
+                                    $boolean_expression = strtolower($fv);
+
+                                    if ($boolean_expression == "true" || $boolean_expression == "false") {
+                                        $final_value[$fk] = ($boolean_expression == "true");
+                                    }
+                                }
+                            }
+                        }
+
+                        try {
+                            if(!empty($commands_translate[$command])) {
+                                $command = $commands_translate[$command];
+                            }
+
+                            if(is_array($value)) {
+                                $exp = $query_builder->expr();
+
+                                if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                                    $exp->field($key.'.$id');
+                                } else {
+                                    $exp->field($key);
+                                }
+
+                                $method = new \ReflectionMethod($exp, $command);
+                                $method->invoke($exp, $array_expression ? $final_value : $final_value[0]);
+
+                                $query_builder->addAnd($exp);
+                            } else {
+                                if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                                    $query_builder->field($key.'.$id');
+                                } else {
+                                    $query_builder->field($key);
+                                }
+
+                                $method = new \ReflectionMethod($query_builder, $command);
+                                $method->invoke($query_builder, $array_expression ? $final_value : $final_value[0]);
+                            }
+
+                            continue;
+                        } catch (\ReflectionException $e) {
+                            throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, 'Invalid query command: '. $key . '=' . $mv);
+                        }
                     }
                 }
-            }
 
-            try {
-                $fieldMapping = $class->getFieldMapping($key);
+                try {
+                    $fieldMapping = $class->getFieldMapping($key);
 
-                if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
-                    $ref = $dm->getReference($fieldMapping['targetDocument'], $value);
-                    $query_builder->field($key)->references($ref);
+                    if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                        $ref = $dm->getReference($fieldMapping['targetDocument'], $mv);
+                        $query_builder->field($key)->references($ref);
 
-                    continue;
+                        continue;
+                    }
+                } catch(\Exception $e) {
                 }
-            } catch(\Exception $e) {
-            }
 
-            $query_builder->field($key)->equals($value);
+                $query_builder->field($key)->equals($mv);
+            }
         }
 
         if(!empty($map) || !empty($reduce)) {
