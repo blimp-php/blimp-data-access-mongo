@@ -349,7 +349,11 @@ class MongoODMUtils {
                     if (isset($fieldMapping['simple']) && $fieldMapping['simple']) {
                         $mongoId = $reference;
                     } else {
-                        $mongoId = $reference['$id'];
+                        if (!is_array($reference)) {
+                            $mongoId = $reference->getId();
+                        } else {
+                            $mongoId = $reference['$id'];
+                        }
                     }
 
                     $s_id = $targetMetadata->getPHPIdentifierValue($mongoId);
@@ -458,7 +462,7 @@ class MongoODMUtils {
         return $this->toStdClass($item);
     }
 
-    public function parseRequestToQuery($_resourceClass, $query, $query_builder, &$map, &$reduce, &$fields_to_get, &$fields_to_embed) {
+    public function parseRequestToQuery($_resourceClass, $query, $query_builder, &$map = null, &$reduce = null, &$fields_to_get = null, &$fields_to_embed = null) {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
         static $commands_translate = [
@@ -467,8 +471,10 @@ class MongoODMUtils {
             'ne' => 'notEqual'
         ];
 
-        $cmf = $dm->getMetadataFactory();
-        $class = $cmf->getMetadataFor($_resourceClass);
+        if($_resourceClass !== null) {
+            $cmf = $dm->getMetadataFactory();
+            $class = $cmf->getMetadataFor($_resourceClass);
+        }
 
         $order_builder = array();
         $pageStartIndex = -1;
@@ -481,6 +487,10 @@ class MongoODMUtils {
         $fields_zero = array();
 
         foreach ($query as $key => $value) {
+            if ($key == 'id') {
+                $key = '_id';
+            }
+
             if ($key == "fields") {
                 $ftg = explode(',', $value);
 
@@ -498,7 +508,7 @@ class MongoODMUtils {
                 continue;
             }
 
-            if ($key == "embed") {
+            if ($key == "embed" && $fields_to_embed !== null) {
                 $fte = explode(',', $value);
 
                 foreach ($fte as $path) {
@@ -515,7 +525,7 @@ class MongoODMUtils {
                 continue;
             }
 
-            if ($key == "map") {
+            if ($key == "map" && $map !== null) {
                 $map = explode('>', $value);
                 foreach ($map as $key => $val) {
                     $subvals = explode(',', $val);
@@ -548,7 +558,7 @@ class MongoODMUtils {
                 continue;
             }
 
-            if ($key == "reduce") {
+            if ($key == "reduce" && $reduce !== null) {
                 $reduce = explode(',', $value);
 
                 foreach ($reduce as $key => $val) {
@@ -707,10 +717,51 @@ class MongoODMUtils {
 
                             continue;
                         }
+                      } else if ($command == "near") {
+                        $pairs = explode('|', $expression);
+                        $coordinates = array_map(function($pair) { return array_map(function($v) { return floatval($v);}, explode(',', $pair)); }, $pairs);
+
+                        $query_near = array('type' => 'Point');
+                        $query_near['coordinates'] = array_shift($coordinates);
+                        if(!empty($coordinates)) {
+                          $query_near['$maxDistance'] = array_shift($coordinates)[0];
+                        }
+                        if(!empty($coordinates)) {
+                          $query_near['$minDistance'] = array_shift($coordinates)[0];
+                        }
+
+                        $query_builder->field($key)->near($query_near);
+
+                        continue;
+                      } else if ($command == "inside") {
+                        $pairs = explode('|', $expression);
+                        $coordinates = array_map(function($pair) { return array_map(function($v) { return floatval($v);}, explode(',', $pair)); }, $pairs);
+
+                        $query_builder->field($key)->geoWithin(
+                          [
+                            'type' => 'Polygon',
+                            'coordinates' => [$coordinates]
+                          ]
+                        );
+
+                        continue;
                     } else {
                         $final_value = array($expression);
 
-                        $fieldMapping = $class->getFieldMapping($key);
+                        $parts = explode('.', $key);
+
+                        $s_class = $class;
+                        foreach ($parts as $i => $field) {
+                            $bp = explode('[', $field);
+
+                            $field = array_shift($bp);
+
+                            $fieldMapping = $s_class->getFieldMapping($field);
+
+                            if(!empty($fieldMapping['targetDocument'])) {
+                                $s_class = $dm->getClassMetadata($fieldMapping['targetDocument']);
+                            }
+                        }
 
                         $array_expression = $command == "in" || $command == "nin";
                         if ($array_expression) {
@@ -780,16 +831,18 @@ class MongoODMUtils {
                     }
                 }
 
-                try {
-                    $fieldMapping = $class->getFieldMapping($key);
+                if(isset($class)) {
+                    try {
+                        $fieldMapping = $class->getFieldMapping($key);
 
-                    if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
-                        $ref = $dm->getReference($fieldMapping['targetDocument'], $mv);
-                        $query_builder->field($key)->references($ref);
+                        if($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                            $ref = $dm->getReference($fieldMapping['targetDocument'], $mv);
+                            $query_builder->field($key)->references($ref);
 
-                        continue;
+                            continue;
+                        }
+                    } catch(\Exception $e) {
                     }
-                } catch(\Exception $e) {
                 }
 
                 $query_builder->field($key)->equals($mv);

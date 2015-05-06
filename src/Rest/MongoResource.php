@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Doctrine\MongoDB\Query\Builder;
 
 class MongoResource {
-    public function process(Container $api, Request $request, $class, $id, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
+    public function process(Container $api, Request $request, $class, $id, $_is_store, $_securityDomain = null, $_resourceClass = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
         if ($_resourceClass == null) {
             $_resourceClass = $class;
         }
@@ -16,6 +16,8 @@ class MongoResource {
         $token = $api['security']->getToken();
 
         $collection = $api['dataaccess.mongoodm.connection']()->selectCollection($api['config']['mongoodm']['default_database'], $_resourceClass);
+
+        $has_date_format = !empty($api['dataaccess.mongoodm.date_format']);
 
         if(\MongoId::isvalid($id)) {
             $m_id = new \MongoId($id);
@@ -73,7 +75,7 @@ class MongoResource {
                     }
                 }
 
-                $item['id'] = $item['_id']->{'$id'};
+                $item['id'] = $id;
                 unset($item['_id']);
 
                 if(array_key_exists('created', $item)) {
@@ -81,12 +83,20 @@ class MongoResource {
                     if($value instanceof \MongoDate) {
                         $item['created'] = new \DateTime('@' . $value->sec);
                     }
+
+                    if($has_date_format) {
+                        $item['created'] = $item['created']->format($api['dataaccess.mongoodm.date_format']);
+                    }
                 }
 
                 if(array_key_exists('updated', $item)) {
                     $value = $item['updated'];
                     if($value instanceof \MongoDate) {
                         $item['updated'] = new \DateTime('@' . $value->sec);
+                    }
+
+                    if($has_date_format) {
+                        $item['updated'] = $item['updated']->format($api['dataaccess.mongoodm.date_format']);
                     }
                 }
 
@@ -122,11 +132,11 @@ class MongoResource {
 
                 $item = $query->getSingleResult();
 
-                if ($item == null) {
+                if (!$_is_store && $item == null) {
                     throw new BlimpHttpException(Response::HTTP_NOT_FOUND, "Not found");
                 }
 
-                if(!$can_doit) {
+                if(!$can_doit && $item != null) {
                     $owner = null;
 
                     if(array_key_exists('owner', $item)) {
@@ -146,12 +156,21 @@ class MongoResource {
                 unset($data['created']);
                 unset($data['updated']);
 
-                $data['owner'] = $item['owner'];
-                $data['created'] = $item['created'];
+                if($item != null) {
+                    $data['owner'] = $item['owner'];
+                    $data['created'] = $item['created'];
+                } else {
+                    $data['owner'] = $token !== null ? $token->getUsername() : null;
+                    $data['created'] = new \MongoDate();
+                }
 
                 $data['updated'] = new \MongoDate();
 
-                $collection->update(['_id' => $m_id], $data);
+                if($_is_store) {
+                    $data['_id'] = $m_id;
+                }
+
+                $collection->update(['_id' => $m_id], $data, ['upsert' => $_is_store]);
 
                 $data['id'] = $id;
                 unset($data['_id']);
@@ -161,12 +180,20 @@ class MongoResource {
                     if($value instanceof \MongoDate) {
                         $data['created'] = new \DateTime('@' . $value->sec);
                     }
+
+                    if($has_date_format) {
+                        $data['created'] = $data['created']->format($api['dataaccess.mongoodm.date_format']);
+                    }
                 }
 
                 if(array_key_exists('updated', $data)) {
                     $value = $data['updated'];
                     if($value instanceof \MongoDate) {
                         $data['updated'] = new \DateTime('@' . $value->sec);
+                    }
+
+                    if($has_date_format) {
+                        $data['updated'] = $data['updated']->format($api['dataaccess.mongoodm.date_format']);
                     }
                 }
 
@@ -227,6 +254,10 @@ class MongoResource {
                     if($value instanceof \MongoDate) {
                         $item['created'] = new \DateTime('@' . $value->sec);
                     }
+
+                    if($has_date_format) {
+                        $item['created'] = $item['created']->format($api['dataaccess.mongoodm.date_format']);
+                    }
                 }
 
                 if(array_key_exists('updated', $item)) {
@@ -234,9 +265,17 @@ class MongoResource {
                     if($value instanceof \MongoDate) {
                         $item['updated'] = new \DateTime('@' . $value->sec);
                     }
+
+                    if($has_date_format) {
+                        $item['updated'] = $item['updated']->format($api['dataaccess.mongoodm.date_format']);
+                    }
                 }
 
                 $item['deleted'] = new \DateTime();
+
+                if($has_date_format) {
+                    $item['deleted'] = $item['deleted']->format($api['dataaccess.mongoodm.date_format']);
+                }
 
                 $result = $item;
 

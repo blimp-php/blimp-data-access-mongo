@@ -21,6 +21,8 @@ class MongoCollection {
 
         $collection = $api['dataaccess.mongoodm.connection']()->selectCollection($api['config']['mongoodm']['default_database'], $_resourceClass);
 
+        $has_date_format = !empty($api['dataaccess.mongoodm.date_format']);
+
         switch ($request->getMethod()) {
             case 'GET':
                 $can_doit = $api['security.permitions.check']($_securityDomain, 'list');
@@ -42,8 +44,14 @@ class MongoCollection {
                     $limit_to_owner = $user;
                 }
 
+                $fields_to_get = array();
+                $fields_to_embed = array();
+
+                $map = array();
+                $reduce = array();
+
                 $query_builder = new Builder($collection);
-                $api['dataaccess.mongoodm.utils']->parseRequestToQuery($request, $query_builder);
+                $api['dataaccess.mongoodm.utils']->parseRequestToQuery(null, $request->query, $query_builder);
 
                 if($limit_to_owner != null) {
                     $query_builder->field('owner')->equals($limit_to_owner);
@@ -70,7 +78,11 @@ class MongoCollection {
                 $elements = array();
 
                 foreach ($cursor as $item) {
-                    $item['id'] = $item['_id']->{'$id'};
+                    if(!empty($item['_id']->{'$id'})) {
+                        $item['id'] = $item['_id']->{'$id'};
+                    } else {
+                        $item['id'] = $item['_id'];
+                    }
                     unset($item['_id']);
 
                     if(array_key_exists('created', $item)) {
@@ -78,12 +90,20 @@ class MongoCollection {
                         if($value instanceof \MongoDate) {
                             $item['created'] = new \DateTime('@' . $value->sec);
                         }
+
+                        if($has_date_format) {
+                            $item['created'] = $item['created']->format($api['dataaccess.mongoodm.date_format']);
+                        }
                     }
 
                     if(array_key_exists('updated', $item)) {
                         $value = $item['updated'];
                         if($value instanceof \MongoDate) {
                             $item['updated'] = new \DateTime('@' . $value->sec);
+                        }
+
+                        if($has_date_format) {
+                            $item['updated'] = $item['updated']->format($api['dataaccess.mongoodm.date_format']);
                         }
                     }
 
