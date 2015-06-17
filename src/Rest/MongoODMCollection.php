@@ -71,6 +71,23 @@ class MongoODMCollection {
                     $item->setId($id);
                 }
 
+                if(!empty($parent_id)) {
+                    if(empty($_parentResourceClass)) {
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent resource class not specified');
+                    }
+
+                    if(empty($_parentIdField)) {
+                        throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Parent id field not specified');
+                    }
+
+                    $setter = new \ReflectionMethod($item, 'set' . ucfirst($_parentIdField));
+                    if(\MongoId::isValid($parent_id)) {
+                        $setter->invoke($item, $dm->getPartialReference($_parentResourceClass, new \MongoId($parent_id)));
+                    } else {
+                        $setter->invoke($item, $dm->getPartialReference($_parentResourceClass, $parent_id));
+                    }
+                }
+
                 if(method_exists($item, 'setTranslatableLocale')) {
                     $contentLang = $request->headers->get('Content-Language');
 
@@ -83,7 +100,7 @@ class MongoODMCollection {
 
                     $item->setTranslatableLocale($contentLang);
                 }
-
+                
                 $dm->persist($item);
                 $dm->flush($item);
 
