@@ -45,7 +45,7 @@ class MongoODMCollection {
 
                 $c = new \ReflectionClass($_resourceClass);
                 $item = $c->newInstance();
-                $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item);
+                $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item, false, $request->files);
 
                 $idProperty = new \ReflectionProperty($_resourceClass, 'id');
                 $anot = $api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotation($idProperty, '\Doctrine\ODM\MongoDB\Mapping\Annotations\Id');

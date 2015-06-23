@@ -10,4 +10,10 @@ use Doctrine\Common\Annotations\Annotation;
 final class BlimpAnnotation extends Annotation {
     /** @var string */
     public $return = 'default';
+
+    /** @var boolean */
+    public $file = false;
+
+    /** @var string */
+    public $bucket = '';
 }
