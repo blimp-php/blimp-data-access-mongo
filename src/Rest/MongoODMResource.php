@@ -28,6 +28,7 @@ class MongoODMResource {
 
                 break;
 
+            case 'POST':
             case 'PUT':
             case 'PATCH':
                 $contentLang = $request->headers->get('Content-Language');
@@ -43,7 +44,7 @@ class MongoODMResource {
                     break;
                 }
 
-                $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $_resourceClass, $id, $contentLang, $user, $_parentResourceClass, $_parentIdField, $parent_id);
+                $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $request->files, $_resourceClass, $id, $contentLang, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
                 return $result;
 

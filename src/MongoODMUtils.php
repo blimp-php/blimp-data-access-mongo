@@ -15,7 +15,7 @@ class MongoODMUtils
         $this->api = $api;
     }
 
-    private function _pre_check($_securityDomain, $permission, $user, $id = null)
+    private function _pre_check($_securityDomain, $permission, $user, $_resourceClass, $id = null)
     {
         $can_doit = $this->api['security.permitions.check']($_securityDomain, $permission);
         $can_doit_self = $this->api['security.permitions.check']($_securityDomain, 'self_'.$permission);
@@ -69,7 +69,7 @@ class MongoODMUtils
         }
     }
 
-    private function _get($_resourceClass, $query = null, $id = null, $owner_id = null, $contentLang = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
+    private function _get($_resourceClass, $query = null, $id = null, $owner = null, $contentLang = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
     {
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
@@ -92,9 +92,8 @@ class MongoODMUtils
 
         if (!empty($id)) {
             $query_builder->field('_id')->equals($id);
-        } elseif (!empty($owner_id)) {
-            $ref = $dm->getPartialReference(get_class($user), $owner_id);
-            $query_builder->field('owner')->references($ref);
+        } elseif (!empty($owner)) {
+            $query_builder->field('owner')->references($owner);
         }
 
         if (!empty($parent_id)) {
@@ -395,7 +394,7 @@ class MongoODMUtils
 
     public function search($_resourceClass, $query, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
     {
-        $can_doit = $this->_pre_check($_securityDomain, 'list', $user);
+        $can_doit = $this->_pre_check($_securityDomain, 'list', $user, $_resourceClass);
 
         $result = $this->_get($_resourceClass, $query, $can_doit['id'], $can_doit['owner'], $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
@@ -408,7 +407,7 @@ class MongoODMUtils
 
     public function get($_resourceClass, $id, $query, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
     {
-        $can_doit = $this->_pre_check($_securityDomain, 'get', $user, $id);
+        $can_doit = $this->_pre_check($_securityDomain, 'get', $user, $_resourceClass, $id);
 
         $result = $this->_get($_resourceClass, $query, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
@@ -425,9 +424,9 @@ class MongoODMUtils
         return $res['elements'][0];
     }
 
-    public function edit($patch, $data, $_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
+    public function edit($patch, $data, $files, $_resourceClass, $id, $contentLang = null, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
     {
-        $can_doit = $this->_pre_check($_securityDomain, 'edit', $user, $id);
+        $can_doit = $this->_pre_check($_securityDomain, 'edit', $user, $_resourceClass, $id);
 
         $result = $this->_get($_resourceClass, null, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
@@ -439,7 +438,7 @@ class MongoODMUtils
 
         $this->_post_check($can_doit, $_securityDomain, 'edit', $user, $item);
 
-        $api['dataaccess.mongoodm.utils']->convertToBlimpDocument($data, $item, $patch);
+        $this->convertToBlimpDocument($data, $item, $patch, $files);
 
         if ($contentLang !== null && method_exists($item, 'setTranslatableLocale')) {
             $item->setTranslatableLocale($contentLang);
@@ -455,7 +454,7 @@ class MongoODMUtils
 
     public function delete($_resourceClass, $id, $_securityDomain = null, $user = null, $_parentResourceClass = null, $_parentIdField = null, $parent_id = null)
     {
-        $can_doit = $this->_pre_check($_securityDomain, 'delete', $user, $id);
+        $can_doit = $this->_pre_check($_securityDomain, 'delete', $user, $_resourceClass, $id);
 
         $result = $this->_get($_resourceClass, null, $id, null, null, $_parentResourceClass, $_parentIdField, $parent_id);
 
@@ -730,6 +729,16 @@ class MongoODMUtils
 
                             continue;
                         }
+                    } elseif ($command == 'exists') {
+                        if ($bar_count == 2) {
+                            $boolean_expression = strtolower($expression);
+
+                            if ($boolean_expression == 'true' || $boolean_expression == 'false') {
+                                $query_builder->field($key)->exists($boolean_expression == 'true');
+
+                                continue;
+                            }
+                        }
                     } elseif ($command == 'near') {
                         $pairs = explode('|', $expression);
                         $coordinates = array_map(function ($pair) { return array_map(function ($v) { return floatval($v);}, explode(',', $pair)); }, $pairs);
@@ -787,7 +796,7 @@ class MongoODMUtils
                                     $final_value[$fk] = $dm->createDBRef($dm->getReference($fieldMapping['targetDocument'], $fv), $fieldMapping)['$id'];
                                 }
                             }
-                        } elseif ($options == 'n') {
+                        } else if ($options == 'n') {
                             foreach ($final_value as $fk => $fv) {
                                 if (is_numeric($fv)) {
                                     $float_expression = floatval($fv);

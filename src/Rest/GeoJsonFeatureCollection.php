@@ -31,20 +31,22 @@ class GeoJsonFeatureCollection {
 
                 $features = [];
                 foreach ($result['elements'] as $value) {
-                    $id = $value['id'];
-                    unset($value['id']);
+                    if(!empty($value[$_geometryField])) {
+                        $id = $value['id'];
+                        unset($value['id']);
 
-                    $geometry = $value[$_geometryField];
-                    unset($value[$_geometryField]);
+                        $geometry = $value[$_geometryField];
+                        unset($value[$_geometryField]);
 
-                    $feature = [
-                        "type" => "Feature",
-                        'id' => $id,
-                        'geometry' => $geometry,
-                        'properties' => $value
-                    ];
+                        $feature = [
+                            "type" => "Feature",
+                            'id' => $id,
+                            'geometry' => $geometry,
+                            'properties' => $value
+                        ];
 
-                    $features[] = $feature;
+                        $features[] = $feature;
+                    }
                 }
 
                 return ["type" => "FeatureCollection", "features" => $features];

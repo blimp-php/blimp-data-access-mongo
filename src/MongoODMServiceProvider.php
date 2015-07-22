@@ -240,7 +240,7 @@ class MongoODMServiceProvider implements ServiceProviderInterface {
 
                 if($api->offsetExists('security.permissions')) {
                     $api->extend('security.permissions', function ($permissions, $api) {
-                        $permissions['data'] = $api['security.permission.factory']('data', ['create', 'list', 'get', 'self_get', 'edit', 'self_edit', 'delete']);
+                        $permissions['data'] = $api['security.permission.factory']('data', ['create', 'list', 'self_list', 'get', 'self_get', 'edit', 'self_edit', 'delete']);
 
                         return $permissions;
                     });
