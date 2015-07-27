@@ -1028,7 +1028,7 @@ class MongoODMUtils
                         || $ftg && (!$embedded_field && $ftg_wildcard || is_array($to_get) && array_key_exists($key, $to_get));
 
             $embed_it = $fte && $embedded_field && ($fte_wildcard || array_key_exists($key, $to_embed));
-            
+
             $is_file = false;
 
             if (!$ftg) {
@@ -1080,7 +1080,7 @@ class MongoODMUtils
                                 $get_it = $equals && $val == $level || $lt && $val > $level || $gt && $val < $level;
                             }
                         }
-                        
+
                         $is_file = $anot->file;
                     }
                 }
@@ -1182,7 +1182,7 @@ class MongoODMUtils
         } else if ($is_file) {
             if ($fieldMapping['type'] == 'collection') {
                 $ret_val = [];
-                
+
                 if(is_array($value)) {
                     foreach ($value as $file) {
                         if(!empty($file['originalName'])) {
@@ -1190,13 +1190,13 @@ class MongoODMUtils
                         }
                     }
                 }
-                
+
                 return $ret_val;
             } else if ($fieldMapping['type'] == 'hash') {
                 $ret_val = null;
-                
+
                 $ret_val = $value['originalName'];
-                
+
                 return $ret_val;
             }
 
@@ -1215,7 +1215,7 @@ class MongoODMUtils
 
         foreach ($class->fieldMappings as $fieldMapping) {
             $key = $fieldMapping['fieldName'];
-            
+
             if (in_array($key, ['id', 'created', 'createdBy', 'updated', 'updatedBy'])) {
                 continue;
             }
@@ -1230,7 +1230,7 @@ class MongoODMUtils
 
             $setter = new \ReflectionMethod($item, 'set'.ucfirst($key));
             $getter = new \ReflectionMethod($item, 'get'.ucfirst($key));
-            
+
             $is_file = false;
             $bucket = null;
 
@@ -1243,11 +1243,11 @@ class MongoODMUtils
                 if ($anot instanceof \Blimp\DataAccess\BlimpAnnotation) {
                     $is_file = $anot->file;
                     $bucket = $anot->bucket;
-                    
+
                     if(empty($bucket)) {
                         $bucket = get_class($item);
                     }
-                    
+
                     break;
                 }
             }
@@ -1345,7 +1345,7 @@ class MongoODMUtils
 
                     if($is_file && !empty($files)) {
                         $uploaded_media = $files->get($key);
-                        
+
                         if (!empty($uploaded_media)) {
                             foreach ($uploaded_media as $uploadedFile) {
                                 $file = $this->api['media.store']($uploadedFile, $bucket);
@@ -1362,10 +1362,10 @@ class MongoODMUtils
                     }
                 } elseif ($fieldMapping['type'] == 'hash') {
                     $current_value = $value;
-                    
+
                     if($is_file && !empty($files)) {
                         $uploadedFile = $files->get($key);
-                        
+
                         if (!empty($uploadedFile)) {
                             $file = $this->api['media.store']($uploadedFile, $bucket);
                             $current_value = $file;

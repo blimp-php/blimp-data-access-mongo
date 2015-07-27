@@ -44,7 +44,7 @@ class MongoODMResource {
                     break;
                 }
 
-                $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $request->files, $_resourceClass, $id, $contentLang, $user, $_parentResourceClass, $_parentIdField, $parent_id);
+                $result = $api['dataaccess.mongoodm.utils']->edit($request->getMethod() == 'PATCH', $request->attributes->get('data'), $request->files, $_resourceClass, $id, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
                 return $result;
 
