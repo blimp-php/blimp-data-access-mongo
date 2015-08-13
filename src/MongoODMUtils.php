@@ -91,8 +91,20 @@ class MongoODMUtils
         }
 
         if (!empty($id)) {
-            $query_builder->field('_id')->equals($id);
-        } elseif (!empty($owner)) {
+            if(is_array($id)) {
+                foreach ($id as $key => $value) {
+                    if($key === 'id') {
+                        $key = '_id';
+                    }
+
+                    $query_builder->field($key)->equals($value);
+                }
+            } else {
+                $query_builder->field('_id')->equals($id);
+            }
+        }
+
+        if (!empty($owner)) {
             $query_builder->field('owner')->references($owner);
         }
 
