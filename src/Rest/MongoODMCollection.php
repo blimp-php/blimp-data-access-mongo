@@ -51,7 +51,7 @@ class MongoODMCollection {
                 $anot = $api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotation($idProperty, '\Doctrine\ODM\MongoDB\Mapping\Annotations\Id');
 
                 if (!empty($anot->strategy) && !empty($anot->options) && !empty($anot->options['class']) && strtoupper($anot->strategy) === 'CUSTOM' && $anot->options['class'] === '\Blimp\DataAccess\BlimpIdProvider') {
-                    $id = $data['id'];
+                    $id = !empty($data['id']) ? $data['id'] : null;
 
                     if (empty($id)) {
                         throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, "Undefined Id", "Id strategy delegated to BlimpIdProvider and no Id provided");
@@ -100,13 +100,13 @@ class MongoODMCollection {
 
                     $item->setTranslatableLocale($contentLang);
                 }
-                
+
                 $dm->persist($item);
                 $dm->flush($item);
 
                 $resource_uri = $request->getPathInfo() . '/' . $item->getId();
 
-                $response = new JsonResponse((object) ["uri" => $resource_uri], Response::HTTP_CREATED);
+                $response = new JsonResponse((object) ["uri" => $resource_uri, "id" => $item->getId()], Response::HTTP_CREATED);
                 $response->headers->set('Location', $resource_uri);
 
                 return $response;

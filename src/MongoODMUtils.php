@@ -672,6 +672,16 @@ class MongoODMUtils
                 continue;
             }
 
+            if ($key == 'search') {
+                $exp = $query_builder->expr();
+
+                $exp->operator('$text', [ '$search' => $value ]);
+
+                $query_builder->addAnd($exp);
+
+                continue;
+            }
+
             if (is_array($value)) {
                 $values = $value;
             } else {
@@ -1240,8 +1250,12 @@ class MongoODMUtils
                 continue;
             }
 
-            $setter = new \ReflectionMethod($item, 'set'.ucfirst($key));
-            $getter = new \ReflectionMethod($item, 'get'.ucfirst($key));
+            if (!in_array($fieldMapping['type'], ['one', 'many']) || $fieldMapping['isOwningSide']) {
+                $setter = new \ReflectionMethod($item, 'set'.ucfirst($key));
+                $getter = new \ReflectionMethod($item, 'get'.ucfirst($key));
+            } else {
+                continue;
+            }
 
             $is_file = false;
             $bucket = null;
@@ -1276,7 +1290,7 @@ class MongoODMUtils
                         if ($fieldMapping['type'] == 'one') {
                             $is_ref = false;
 
-                            if ($fieldMapping['embedded']) {
+                            if (!empty($fieldMapping['embedded']) && $fieldMapping['embedded']) {
                                 // it's an embedded value, replace it
                                 $current_value = $c->newInstance();
                             } else {
@@ -1390,7 +1404,7 @@ class MongoODMUtils
 
             $setter->invoke($item, $current_value);
         }
-$this->api['blimp.logger']->log('info', var_export($item, true));
+
         return $item;
     }
 }
