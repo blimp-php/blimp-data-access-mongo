@@ -442,13 +442,17 @@ class MongoODMUtils
 
         $result = $this->_get($_resourceClass, null, $id, null, $contentLang, $_parentResourceClass, $_parentIdField, $parent_id);
 
-        if ($result['count'] === 0) {
-            throw new BlimpHttpException(Response::HTTP_NOT_FOUND, 'Not found');
+        // TODO: Allow the configuration if it's a store (allow direct PUT of non-existing resources)
+        if ($result['count'] !== 0) {
+            $item = $result['elements'][0];
+            // throw new BlimpHttpException(Response::HTTP_NOT_FOUND, 'Not found');
+
+            $this->_post_check($can_doit, $_securityDomain, 'edit', $user, $item);
+        } else {
+            $c = new \ReflectionClass($_resourceClass);
+            $item = $c->newInstance();
+            $item->setId($id);
         }
-
-        $item = $result['elements'][0];
-
-        $this->_post_check($can_doit, $_securityDomain, 'edit', $user, $item);
 
         $this->convertToBlimpDocument($data, $item, $patch, $files);
 
