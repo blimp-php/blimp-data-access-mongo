@@ -2,9 +2,9 @@
 
 namespace Blimp\DataAccess;
 
+use Blimp\Http\BlimpHttpException;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\HttpFoundation\Response;
-use Blimp\Http\BlimpHttpException;
 
 class MongoODMUtils
 {
@@ -18,10 +18,10 @@ class MongoODMUtils
     private function _pre_check($_securityDomain, $permission, $user, $_resourceClass, $id = null)
     {
         $can_doit = $this->api['security.permitions.check']($_securityDomain, $permission);
-        $can_doit_self = $this->api['security.permitions.check']($_securityDomain, 'self_'.$permission);
+        $can_doit_self = $this->api['security.permitions.check']($_securityDomain, 'self_' . $permission);
 
         if (!$can_doit && !$can_doit_self) {
-            $this->api['security.permission.denied']($_securityDomain.':'.$permission.',self_'.$permission);
+            $this->api['security.permission.denied']($_securityDomain . ':' . $permission . ',self_' . $permission);
         }
 
         $limit_to_id = null;
@@ -29,19 +29,19 @@ class MongoODMUtils
 
         if (!$can_doit) {
             if ($user == null) {
-                $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+                $this->api['security.permission.denied']($_securityDomain . ':' . $permission);
             }
 
             if (is_a($user, $_resourceClass, false)) {
                 $limit_to_id = $user->getId();
 
                 if ($id != $limit_to_id) {
-                    $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+                    $this->api['security.permission.denied']($_securityDomain . ':' . $permission);
                 }
             } elseif (method_exists($_resourceClass, 'getOwner')) {
                 $limit_to_owner = $user;
             } else {
-                $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+                $this->api['security.permission.denied']($_securityDomain . ':' . $permission);
             }
         }
 
@@ -64,7 +64,7 @@ class MongoODMUtils
             }
 
             if ($owner == null || !is_a($owner, get_class($user), false) || $user->getId() != $owner->getId()) {
-                $this->api['security.permission.denied']($_securityDomain.':'.$permission);
+                $this->api['security.permission.denied']($_securityDomain . ':' . $permission);
             }
         }
     }
@@ -91,9 +91,9 @@ class MongoODMUtils
         }
 
         if (!empty($id)) {
-            if(is_array($id)) {
+            if (is_array($id)) {
                 foreach ($id as $key => $value) {
-                    if($key === 'id') {
+                    if ($key === 'id') {
                         $key = '_id';
                     }
 
@@ -235,11 +235,11 @@ class MongoODMUtils
                 $field .= implode('[', $bp);
 
                 if ($expand_array) {
-                    $inc = strtr($field_path.'_'.$field, '.[]', '___');
-                    $keys_many[] = $field_path.'.'.$field;
-                    $field_path .= '.'.$field.'['.$inc.'_idx]';
+                    $inc = strtr($field_path . '_' . $field, '.[]', '___');
+                    $keys_many[] = $field_path . '.' . $field;
+                    $field_path .= '.' . $field . '[' . $inc . '_idx]';
                 } else {
-                    $field_path .= '.'.$field.($end != null ? '['.$end : '');
+                    $field_path .= '.' . $field . ($end != null ? '[' . $end : '');
                 }
 
                 if (!empty($fieldMapping['targetDocument'])) {
@@ -259,63 +259,71 @@ class MongoODMUtils
 
         if (!empty($commands)) {
             foreach ($commands as $command) {
-                $params = explode(' ', $command);
+                $params = str_getcsv($command, ' ', "'");
                 $command = array_shift($params);
 
                 switch ($command) {
-                    case 'replace':
-                        $field_value .= '.replace('.implode(', ', $params).')';
+                    case "replace":
+                        if(!empty($params) && count($params) === 2) {
+                            $field_value .= ".replace('" . $params[0] . "', '" . $params[1] . "')";
+                        }
                         break;
 
-                    case 'upper':
-                        $field_value .= '.toUpperCase()';
+                    case "upper":
+                        $field_value .= ".toUpperCase()";
                         break;
 
-                    case 'lower':
-                        $field_value .= '.toLowerCase()';
+                    case "lower":
+                        $field_value .= ".toLowerCase()";
                         break;
 
-                    case 'trim':
-                        $field_value .= '.trim()';
+                    case "trim":
+                        $field_value .= ".trim()";
                         break;
 
-                    case 'substr':
-                        $field_value .= '.substring('.implode(', ', $params).')';
+                    case "substr":
+                        $field_value .= ".substring(" . implode(", ", $params) . ")";
                         break;
 
-                    case 'size':
-                        $field_value .= '.length';
+                    case "size":
+                        $field_value .= ".length";
                         break;
 
-                    case 'slice':
-                        $field_value .= '.slice('.implode(', ', $params).')';
+                    case "slice":
+                        $field_value .= ".slice(" . implode(", ", $params) . ")";
                         break;
 
-                    case 'format':
-                        $field_value = 'formatDate('.$field_value.', '.implode(', ', $params).')';
+                    case "format":
+                        $field_value = "formatDate(" . $field_value . ", '" . $params[0] . "')";
                         break;
 
-                    case 'diff':
-                        if (empty($params) || $params[0] == 'now') {
-                            $params[0] = 'new Date()';
+                    case "diff":
+                        if (empty($params) || $params[0] == "now") {
+                            $params[0] = "new Date()";
                         } else {
-                            $params[0] = 'new Date('.$params[0].')';
+                            $params[0] = "new Date('" . $params[0] . "')";
                         }
 
-                        $field_value = 'diffDate('.$field_value.', '.implode(', ', $params).')';
+                        if (empty($params[1])) {
+                            $params[1] = "'milliseconds'";
+                        } else {
+                            $params[1] = "'" . $params[1] . "'";
+                        }
+
+                        $field_value = "diffDate(" . $field_value . ", " . implode(", ", $params) . ")";
                         break;
 
-                    case 'round':
-                    case 'floor':
-                    case 'ceil':
+                    case "round":
+                    case "floor":
+                    case "ceil":
                         if (empty($params[0])) {
                             $params[0] = 0;
                         }
 
-                        $multi = '1';
-                        $multi = str_pad($multi, intval($params[0]) + 1, '0');
+                        $multi = "1";
+                        $multi = str_pad($multi, intval($params[0]) + 1, "0");
 
-                        $field_value = '(Math.'.$command.'('.$field_value.' * '.$multi.') / '.$multi.')';
+                        $field_value = "(Math." . $command . "(" . $field_value . " * " . $multi . ") / " . $multi . ")";
                         break;
 
                     default:
@@ -361,7 +369,7 @@ class MongoODMUtils
                     $return[] = $obj;
                 }
 
-                $lookup .= $field.'|'.$id.'|';
+                $lookup .= $field . '|' . $id . '|';
             } else {
                 $id = '';
 
@@ -380,10 +388,10 @@ class MongoODMUtils
 
                     $return[] = $dm->getReference($className, $s_id);
 
-                    $id .= $s_id.'§';
+                    $id .= $s_id . '§';
                 }
 
-                $lookup .= $field.'|'.$id.'|';
+                $lookup .= $field . '|' . $id . '|';
             }
 
             if ($is_array || (!$expand_array && $fieldMapping['type'] == 'many')) {
@@ -395,9 +403,9 @@ class MongoODMUtils
             $v = $values[$field];
 
             if (is_array($v)) {
-                $lookup .= $field.'|'.hash('md5', serialize($v)).'|';
+                $lookup .= $field . '|' . hash('md5', serialize($v)) . '|';
             } else {
-                $lookup .= $field.'|'.$values[$field].'|';
+                $lookup .= $field . '|' . $values[$field] . '|';
             }
 
             return $v;
@@ -577,7 +585,7 @@ class MongoODMUtils
                             'field_value' => $field_value,
                         ];
 
-                        $keys[] = '"'.$field.'" : '.$field_value;
+                        $keys[] = '"' . $field . '" : ' . $field_value;
                     }
 
                     $map[$key] = $subvals;
@@ -602,7 +610,7 @@ class MongoODMUtils
                     $field_info = $this->_buildFieldPath($class, $field, $keys_many);
                     $field_access = $field_info['path'];
 
-                    $field_key = $field.'_'.$operator;
+                    $field_key = $field . '_' . $operator;
 
                     $reduce[$key] = [
                         'operator' => $operator,
@@ -615,24 +623,24 @@ class MongoODMUtils
                     ];
 
                     if ($operator == 'count') {
-                        $fields[] = '"'.$field_key.'" : ('.$field_access.' !== null ? 1 : 0)';
+                        $fields[] = '"' . $field_key . '" : (' . $field_access . ' !== null ? 1 : 0)';
                     } elseif ($operator == 'avg') {
-                        $fields[] = '"'.$field_key.'_count" : ('.$field_access.' !== null ? 1 : 0)';
-                        $fields[] = '"'.$field_key.'_sum" : ('.$field_access.' !== null ? '.$field_access.' : 0)';
-                        $fields_zero[] = '"'.$field_key.'_count" : 0';
-                        $fields_zero[] = '"'.$field_key.'_sum" : 0';
+                        $fields[] = '"' . $field_key . '_count" : (' . $field_access . ' !== null ? 1 : 0)';
+                        $fields[] = '"' . $field_key . '_sum" : (' . $field_access . ' !== null ? ' . $field_access . ' : 0)';
+                        $fields_zero[] = '"' . $field_key . '_count" : 0';
+                        $fields_zero[] = '"' . $field_key . '_sum" : 0';
                     } else {
-                        $fields[] = '"'.$field_key.'" : '.$field_access;
+                        $fields[] = '"' . $field_key . '" : ' . $field_access;
                     }
 
                     if ($operator == 'aggregate') {
-                        $fields_zero[] = '"'.$field_key.'" : []';
+                        $fields_zero[] = '"' . $field_key . '" : []';
                     } elseif ($operator == 'count' || $operator == 'sum') {
-                        $fields_zero[] = '"'.$field_key.'" : 0';
+                        $fields_zero[] = '"' . $field_key . '" : 0';
                     } elseif ($operator == 'concat') {
-                        $fields_zero[] = '"'.$field_key.'" : ""';
+                        $fields_zero[] = '"' . $field_key . '" : ""';
                     } else {
-                        $fields_zero[] = '"'.$field_key.'" : null';
+                        $fields_zero[] = '"' . $field_key . '" : null';
                     }
                 }
 
@@ -679,7 +687,7 @@ class MongoODMUtils
             if ($key == 'search') {
                 $exp = $query_builder->expr();
 
-                $exp->operator('$text', [ '$search' => $value ]);
+                $exp->operator('$text', ['$search' => $value]);
 
                 $query_builder->addAnd($exp);
 
@@ -713,7 +721,7 @@ class MongoODMUtils
                                 ++$bar_count;
                             } else {
                                 if (strlen($expression) > 0) {
-                                    $expression = substr($expression, 0, strlen($expression) - 1).'/';
+                                    $expression = substr($expression, 0, strlen($expression) - 1) . '/';
                                 }
                             }
                         } elseif ($bar_count == 2) {
@@ -726,7 +734,7 @@ class MongoODMUtils
 
                     if ($command == 'm') {
                         if ($bar_count == 3) {
-                            $query_builder->field($key)->equals(new \MongoRegex('/'.$expression.'/'.$options));
+                            $query_builder->field($key)->equals(new \MongoRegex('/' . $expression . '/' . $options));
 
                             continue;
                         }
@@ -767,7 +775,11 @@ class MongoODMUtils
                         }
                     } elseif ($command == 'near') {
                         $pairs = explode('|', $expression);
-                        $coordinates = array_map(function ($pair) { return array_map(function ($v) { return floatval($v);}, explode(',', $pair)); }, $pairs);
+                        $coordinates = array_map(function ($pair) {
+                            return array_map(function ($v) {
+                                return floatval($v);
+                            }, explode(',', $pair));
+                        }, $pairs);
 
                         $query_near = array('type' => 'Point');
                         $query_near['coordinates'] = array_shift($coordinates);
@@ -783,13 +795,17 @@ class MongoODMUtils
                         continue;
                     } elseif ($command == 'inside') {
                         $pairs = explode('|', $expression);
-                        $coordinates = array_map(function ($pair) { return array_map(function ($v) { return floatval($v);}, explode(',', $pair)); }, $pairs);
+                        $coordinates = array_map(function ($pair) {
+                            return array_map(function ($v) {
+                                return floatval($v);
+                            }, explode(',', $pair));
+                        }, $pairs);
 
                         $query_builder->field($key)->geoWithin(
-                          [
-                            'type' => 'Polygon',
-                            'coordinates' => [$coordinates],
-                          ]
+                            [
+                                'type' => 'Polygon',
+                                'coordinates' => [$coordinates],
+                            ]
                         );
 
                         continue;
@@ -852,7 +868,7 @@ class MongoODMUtils
                                 $exp = $query_builder->expr();
 
                                 if ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
-                                    $exp->field($key.'.$id');
+                                    $exp->field($key . '.$id');
                                 } else {
                                     $exp->field($key);
                                 }
@@ -863,7 +879,7 @@ class MongoODMUtils
                                 $query_builder->addAnd($exp);
                             } else {
                                 if ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
-                                    $query_builder->field($key.'.$id');
+                                    $query_builder->field($key . '.$id');
                                 } else {
                                     $query_builder->field($key);
                                 }
@@ -874,7 +890,7 @@ class MongoODMUtils
 
                             continue;
                         } catch (\ReflectionException $e) {
-                            throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, 'Invalid query command: '.$key.'='.$mv);
+                            throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, 'Invalid query command: ' . $key . '=' . $mv);
                         }
                     }
                 }
@@ -911,7 +927,7 @@ class MongoODMUtils
                     $used[$key] = 1;
 
                     $inc = strtr($key, '.[]', '___');
-                    $f_map .= 'for (var '.$inc.'_idx = 0; '.$inc.'_idx != '.$key.'.length; ++'.$inc.'_idx) { ';
+                    $f_map .= 'for (var ' . $inc . '_idx = 0; ' . $inc . '_idx != ' . $key . '.length; ++' . $inc . '_idx) { ';
 
                     $to_close .= '}';
                 }
@@ -940,22 +956,22 @@ class MongoODMUtils
                     $field = $field_meta['field_key'];
 
                     if ($operator == 'aggregate') {
-                        $f_reduce .= 'reduced["'.$field.'"] = reduced["'.$field.'"].concat(value["'.$field.'"])';
+                        $f_reduce .= 'reduced["' . $field . '"] = reduced["' . $field . '"].concat(value["' . $field . '"])';
                     } elseif ($operator == 'first') {
-                        $f_reduce .= 'if(reduced["'.$field.'"] === null) { reduced["'.$field.'"] = value["'.$field.'"]; } ';
+                        $f_reduce .= 'if(reduced["' . $field . '"] === null) { reduced["' . $field . '"] = value["' . $field . '"]; } ';
                     } elseif ($operator == 'last') {
-                        $f_reduce .= 'reduced["'.$field.'"] = value["'.$field.'"];';
+                        $f_reduce .= 'reduced["' . $field . '"] = value["' . $field . '"];';
                     } elseif ($operator == 'min') {
-                        $f_reduce .= 'if(reduced["'.$field.'"] === null) { reduced["'.$field.'"] = value["'.$field.'"]; } else { ';
-                        $f_reduce .= 'reduced["'.$field.'"] = Math.min(reduced["'.$field.'"], value["'.$field.'"]); }';
+                        $f_reduce .= 'if(reduced["' . $field . '"] === null) { reduced["' . $field . '"] = value["' . $field . '"]; } else { ';
+                        $f_reduce .= 'reduced["' . $field . '"] = Math.min(reduced["' . $field . '"], value["' . $field . '"]); }';
                     } elseif ($operator == 'max') {
-                        $f_reduce .= 'if(reduced["'.$field.'"] === null) { reduced["'.$field.'"] = value["'.$field.'"]; } else { ';
-                        $f_reduce .= 'reduced["'.$field.'"] = Math.max(reduced["'.$field.'"], value["'.$field.'"]); }';
+                        $f_reduce .= 'if(reduced["' . $field . '"] === null) { reduced["' . $field . '"] = value["' . $field . '"]; } else { ';
+                        $f_reduce .= 'reduced["' . $field . '"] = Math.max(reduced["' . $field . '"], value["' . $field . '"]); }';
                     } elseif ($operator == 'avg') {
-                        $f_reduce .= 'reduced["'.$field.'_count"] += value["'.$field.'_count"]; ';
-                        $f_reduce .= 'reduced["'.$field.'_sum"] += value["'.$field.'_sum"]; ';
+                        $f_reduce .= 'reduced["' . $field . '_count"] += value["' . $field . '_count"]; ';
+                        $f_reduce .= 'reduced["' . $field . '_sum"] += value["' . $field . '_sum"]; ';
                     } elseif ($operator == 'sum' || $operator == 'count' || $operator == 'concat') {
-                        $f_reduce .= 'reduced["'.$field.'"] += value["'.$field.'"]; ';
+                        $f_reduce .= 'reduced["' . $field . '"] += value["' . $field . '"]; ';
                     }
                 }
                 $f_reduce .= '}); return reduced; }';
@@ -966,10 +982,10 @@ class MongoODMUtils
                     $field = $field_meta['field_key'];
 
                     if ($operator == 'avg') {
-                        $f_finalize .= 'if (reduced["'.$field.'_count"] > 0) {';
-                        $f_finalize .= 'reduced["'.$field.'"] = reduced["'.$field.'_sum"] / reduced["'.$field.'_count"]; ';
-                        $f_finalize .= 'delete reduced["'.$field.'_count"]; ';
-                        $f_finalize .= 'delete reduced["'.$field.'_sum"]; ';
+                        $f_finalize .= 'if (reduced["' . $field . '_count"] > 0) {';
+                        $f_finalize .= 'reduced["' . $field . '"] = reduced["' . $field . '_sum"] / reduced["' . $field . '_count"]; ';
+                        $f_finalize .= 'delete reduced["' . $field . '_count"]; ';
+                        $f_finalize .= 'delete reduced["' . $field . '_sum"]; ';
                         $f_finalize .= '}';
                     }
                 }
@@ -1011,6 +1027,7 @@ class MongoODMUtils
 
         return $array;
     }
+
     /**
      * Convert Doctrine\ODM Document to plain simple stdClass
      *  https://gist.github.com/ajaxray/94b27439ba9c3840d420.
@@ -1024,7 +1041,7 @@ class MongoODMUtils
         }
 
         if (is_a($doc, 'MongoDate')) {
-            return $this->formatValue(\Doctrine\ODM\MongoDB\Types\DateType::getDateTime($doc), ['type' => 'date'], $level, $to_embed);
+            return $this->formatValue(\Doctrine\ODM\MongoDB\Types\DateType::getDateTime($doc), ['type' => 'date'], $level, $to_get, $to_embed);
         }
 
         $dm = $this->api['dataaccess.mongoodm.documentmanager']();
@@ -1050,31 +1067,73 @@ class MongoODMUtils
             $embedded_field = $fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many';
 
             $get_it = !$ftg && !$embedded_field
-                        || $key === 'id'
-                        || $ftg && (!$embedded_field && $ftg_wildcard || is_array($to_get) && array_key_exists($key, $to_get));
+                || $key === 'id'
+                || $ftg && (!$embedded_field && $ftg_wildcard || is_array($to_get) && array_key_exists($key, $to_get));
 
             $embed_it = $fte && $embedded_field && ($fte_wildcard || array_key_exists($key, $to_embed));
 
             $is_file = false;
 
-            if (!$ftg) {
-                $prop = new \ReflectionProperty($doc, $key);
-                $prop->setAccessible(true);
+            $hydrate = true;
 
-                $propertyAnnotations = $this->api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotations($prop);
+            $prop = new \ReflectionProperty($doc, $key);
+            $prop->setAccessible(true);
 
-                foreach ($propertyAnnotations as $anot) {
-                    if ($anot instanceof \Blimp\DataAccess\BlimpAnnotation) {
+            $propertyAnnotations = $this->api['dataaccess.doctrine.annotation.reader']->getPropertyAnnotations($prop);
+
+            foreach ($propertyAnnotations as $anot) {
+                if ($anot instanceof \Blimp\DataAccess\BlimpAnnotation) {
+                    if ($anot->hydrate !== 'yes') {
+                        if ($anot->hydrate === 'yes') {
+                            $hydrate = true;
+                        } else if ($anot->hydrate === 'no') {
+                            $hydrate = false;
+                        } else if ($anot->return === 'direct') {
+                            $hydrate = $level == 0;
+                        } else if ($anot->return === 'reference') {
+                            $hydrate = $level > 0;
+                        } else {
+                            $equals = true;
+                            $lt = false;
+                            $gt = false;
+
+                            $val = $anot->return;
+
+                            $len = strlen($val);
+
+                            if ($len > 1) {
+                                $equals = $anot->return[0] === '=';
+                                $lt = $anot->return[0] === '<';
+                                $gt = $anot->return[0] === '>';
+
+                                if ($equals || $lt || $gt) {
+                                    $val = substr($anot->return, 1);
+
+                                    if ($len > 2) {
+                                        if ($anot->return[1] === '=') {
+                                            $equals = true;
+                                            $val = substr($anot->return, 2);
+                                        }
+                                    }
+                                }
+                            }
+
+                            $val = intval($val) - 1;
+                            $hydrate = $equals && $val == $level || $lt && $val > $level || $gt && $val < $level;
+                        }
+                    }
+
+                    if (!$ftg) {
                         if ($anot->return !== 'default') {
                             if ($anot->return === 'yes') {
                                 $get_it = true;
-                            } elseif ($anot->return === 'no') {
+                            } else if ($anot->return === 'no') {
                                 $get_it = false;
-                            } elseif ($anot->return === 'direct') {
+                            } else if ($anot->return === 'direct') {
                                 $get_it = $level == 0;
-                            } elseif ($anot->return === 'reference') {
+                            } else if ($anot->return === 'reference') {
                                 $get_it = $level > 0;
-                            } elseif ($anot->return === 'never') {
+                            } else if ($anot->return === 'never') {
                                 continue 2;
                             } else {
                                 $equals = true;
@@ -1106,9 +1165,13 @@ class MongoODMUtils
                                 $get_it = $equals && $val == $level || $lt && $val > $level || $gt && $val < $level;
                             }
                         }
-
-                        $is_file = $anot->file;
+                    } else {
+                        if ($anot->return === 'never') {
+                            continue 2;
+                        }
                     }
+
+                    $is_file = $anot->file;
                 }
             }
 
@@ -1139,6 +1202,7 @@ class MongoODMUtils
                             }
 
                             $fields_to_get[$sub_field][] = $sub_ftg;
+                            $hydrate = true;
                         }
                     }
                 }
@@ -1163,15 +1227,21 @@ class MongoODMUtils
                             }
 
                             $fields_to_embed[$sub_field][] = $sub_fte;
+                            $hydrate = true;
                         }
                     }
                 }
 
-                $getter = new \ReflectionMethod($doc, 'get'.ucfirst($key));
+                if ($hydrate) {
+                    $getter = new \ReflectionMethod($doc, 'get' . ucfirst($key));
 
-                $doc_value = $getter->invoke($doc);
+                    $doc_value = $getter->invoke($doc);
 
-                $value = $this->formatValue($doc_value, $fieldMapping, $level, $fields_to_get, $fields_to_embed, $is_file);
+                    $value = $this->formatValue($doc_value, $fieldMapping, $level, $fields_to_get, $fields_to_embed, $is_file);
+                } else {
+                    $doc_value = $prop->getValue($doc);
+                    $value = !empty($doc_value) ? $doc_value->getId() : null;
+                }
 
                 if ($value !== null) {
                     $document[$key] = $value;
@@ -1182,7 +1252,7 @@ class MongoODMUtils
         return $document;
     }
 
-    private function formatValue($value, $fieldMapping, $level, $to_get, $to_embed, $is_file)
+    private function formatValue($value, $fieldMapping, $level, $to_get, $to_embed, $is_file = false)
     {
         if ($value === null) {
             return;
@@ -1209,9 +1279,9 @@ class MongoODMUtils
             if ($fieldMapping['type'] == 'collection') {
                 $ret_val = [];
 
-                if(is_array($value)) {
+                if (is_array($value)) {
                     foreach ($value as $file) {
-                        if(!empty($file['originalName'])) {
+                        if (!empty($file['originalName'])) {
                             $ret_val[] = $file['originalName'];
                         }
                     }
@@ -1255,8 +1325,8 @@ class MongoODMUtils
             }
 
             if (!in_array($fieldMapping['type'], ['one', 'many']) || $fieldMapping['isOwningSide']) {
-                $setter = new \ReflectionMethod($item, 'set'.ucfirst($key));
-                $getter = new \ReflectionMethod($item, 'get'.ucfirst($key));
+                $setter = new \ReflectionMethod($item, 'set' . ucfirst($key));
+                $getter = new \ReflectionMethod($item, 'get' . ucfirst($key));
             } else {
                 continue;
             }
@@ -1274,7 +1344,7 @@ class MongoODMUtils
                     $is_file = $anot->file;
                     $bucket = $anot->bucket;
 
-                    if(empty($bucket)) {
+                    if (empty($bucket)) {
                         $bucket = get_class($item);
                     }
 
@@ -1367,13 +1437,13 @@ class MongoODMUtils
                 } elseif ($fieldMapping['type'] == 'collection') {
                     $current_value = [];
 
-                    if(!empty($value)) {
+                    if (!empty($value)) {
                         foreach ($value as $v) {
                             $current_value[] = $v;
                         }
                     }
 
-                    if($is_file && !empty($files)) {
+                    if ($is_file && !empty($files)) {
                         $uploaded_media = $files->get($key);
 
                         if (!empty($uploaded_media)) {
@@ -1387,13 +1457,13 @@ class MongoODMUtils
                     if (!empty($this->api['dataaccess.mongoodm.date_format'])) {
                         $current_value = \DateTime::createFromFormat($this->api['dataaccess.mongoodm.date_format'], $value);
                         if ($current_value === false) {
-                            throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, $value.' is not a valid datetime ('.$this->api['dataaccess.mongoodm.date_format'].')');
+                            throw new BlimpHttpException(Response::HTTP_BAD_REQUEST, $value . ' is not a valid datetime (' . $this->api['dataaccess.mongoodm.date_format'] . ')');
                         }
                     }
                 } elseif ($fieldMapping['type'] == 'hash') {
                     $current_value = $value;
 
-                    if($is_file && !empty($files)) {
+                    if ($is_file && !empty($files)) {
                         $uploadedFile = $files->get($key);
 
                         if (!empty($uploadedFile)) {

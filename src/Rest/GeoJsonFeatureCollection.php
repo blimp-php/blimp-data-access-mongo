@@ -3,12 +3,13 @@ namespace Blimp\DataAccess\Rest;
 
 use Blimp\Http\BlimpHttpException;
 use Pimple\Container;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class GeoJsonFeatureCollection {
-    public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_geometryField = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null) {
+class GeoJsonFeatureCollection
+{
+    public function process(Container $api, Request $request, $_securityDomain = null, $_resourceClass = null, $_geometryField = null, $parent_id = null, $_parentIdField = null, $_parentResourceClass = null)
+    {
         if ($_resourceClass == null) {
             throw new BlimpHttpException(Response::HTTP_INTERNAL_SERVER_ERROR, 'Resource class not specified');
         }
@@ -27,11 +28,17 @@ class GeoJsonFeatureCollection {
             case 'GET':
                 $contentLang = $api['http.utils']->guessContentLang($request->query->get('locale'), $request->getLanguages());
 
+                if ($request->query->has('fields')) {
+                    $fields = $request->query->get('fields');
+                    $fields .= ',' . $_geometryField;
+                    $request->query->set('fields', $fields);
+                }
+
                 $result = $api['dataaccess.mongoodm.utils']->search($_resourceClass, $request->query, $contentLang, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
                 $features = [];
                 foreach ($result['elements'] as $value) {
-                    if(!empty($value[$_geometryField])) {
+                    if (!empty($value[$_geometryField])) {
                         $id = $value['id'];
                         unset($value['id']);
 

@@ -11,6 +11,9 @@ final class BlimpAnnotation extends Annotation {
     /** @var string */
     public $return = 'default';
 
+    /** @var string */
+    public $hydrate = 'yes';
+
     /** @var boolean */
     public $file = false;
 
