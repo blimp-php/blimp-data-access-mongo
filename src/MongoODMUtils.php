@@ -835,7 +835,8 @@ class MongoODMUtils
                         if ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
                             foreach ($final_value as $fk => $fv) {
                                 if (!empty($fv)) {
-                                    $final_value[$fk] = $dm->createDBRef($dm->getReference($fieldMapping['targetDocument'], $fv), $fieldMapping)['$id'];
+                                    $ref = $dm->createDBRef($dm->getReference($fieldMapping['targetDocument'], $fv), $fieldMapping);
+                                    $final_value[$fk] = $fieldMapping['simple'] ? $ref : $ref['$id'];
                                 }
                             }
                         } else if ($options == 'n') {
@@ -867,7 +868,7 @@ class MongoODMUtils
                             if (is_array($value)) {
                                 $exp = $query_builder->expr();
 
-                                if ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                                if (!$fieldMapping['simple'] && ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many')) {
                                     $exp->field($key . '.$id');
                                 } else {
                                     $exp->field($key);
@@ -878,7 +879,7 @@ class MongoODMUtils
 
                                 $query_builder->addAnd($exp);
                             } else {
-                                if ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many') {
+                                if (!$fieldMapping['simple'] && ($fieldMapping['type'] === 'one' || $fieldMapping['type'] === 'many')) {
                                     $query_builder->field($key . '.$id');
                                 } else {
                                     $query_builder->field($key);
