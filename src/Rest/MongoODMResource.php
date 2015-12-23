@@ -51,7 +51,7 @@ class MongoODMResource {
                 break;
 
             case 'DELETE':
-                $result = $api['dataaccess.mongoodm.utils']->delete($_resourceClass, $id, $user, $_parentResourceClass, $_parentIdField, $parent_id);
+                $result = $api['dataaccess.mongoodm.utils']->delete($_resourceClass, $id, $_securityDomain, $user, $_parentResourceClass, $_parentIdField, $parent_id);
 
                 return $result;
 
