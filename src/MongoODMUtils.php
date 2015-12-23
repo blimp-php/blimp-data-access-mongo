@@ -345,7 +345,7 @@ class MongoODMUtils
         $expand_array = $field_info['expand_array'];
         $is_array = isset($field_info['operator']) && $field_info['operator'] === 'aggregate';
 
-        if ((is_array($values[$field]) || is_object($values[$field])) && in_array($fieldMapping['type'], ['one', 'many'])) {
+        if (!empty($fieldMapping['reference']) && $fieldMapping['reference'] && in_array($fieldMapping['type'], ['one', 'many'])) {
             if ($is_array || (!$expand_array && $fieldMapping['type'] == 'many')) {
                 $references = $values[$field];
             } else {
@@ -1326,8 +1326,12 @@ class MongoODMUtils
             }
 
             if (!in_array($fieldMapping['type'], ['one', 'many']) || $fieldMapping['isOwningSide']) {
-                $setter = new \ReflectionMethod($item, 'set' . ucfirst($key));
-                $getter = new \ReflectionMethod($item, 'get' . ucfirst($key));
+                try {
+                    $setter = new \ReflectionMethod($item, 'set' . ucfirst($key));
+                    $getter = new \ReflectionMethod($item, 'get' . ucfirst($key));
+                } catch(\Error $e) {
+                    continue;
+                }
             } else {
                 continue;
             }
